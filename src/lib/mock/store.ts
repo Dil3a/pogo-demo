@@ -203,7 +203,7 @@ const seedUser: User = {
   email: 'student@uemf.ma',
   firstName: 'Yassine',
   lastName: 'El Idrissi',
-  establishment: 'EIDIA',
+  establishment: 'UEMF',
   program: 'Génie Informatique',
   role: 'student',
   walletBalanceCentimes: 24700, // 247 DHS — matches the existing portal display

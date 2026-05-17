@@ -44,6 +44,7 @@ export function useCreateRide() {
       qc.invalidateQueries({ queryKey: ['scooters'] });
       qc.invalidateQueries({ queryKey: ridesQueryKey });
       qc.invalidateQueries({ queryKey: ['wallet'] });
+      qc.invalidateQueries({ queryKey: ['me'] });
     },
   });
 }
