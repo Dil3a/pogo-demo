@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --uemf-blue: 0 58 122;
+    --uemf-green: 26 138 58;
+    --pogo: 0 201 177;
+  }
+
+  html,
+  body {
+    font-family:
+      'Segoe UI',
+      -apple-system,
+      BlinkMacSystemFont,
+      'Helvetica Neue',
+      Roboto,
+      sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background: linear-gradient(135deg, #eef2fb 0%, #e8f5e9 100%);
+    color: #1a2a4a;
+    min-height: 100dvh;
+  }
+
+  /* MapLibre attribution styling — softer to fit the design */
+  .maplibregl-ctrl-attrib {
+    background: rgba(255, 255, 255, 0.85) !important;
+    font-size: 10px !important;
+  }
+}
+
+@layer utilities {
+  .shadow-card {
+    box-shadow: 0 2px 10px rgba(0, 58, 122, 0.05);
+  }
+  .shadow-pogo-card {
+    box-shadow: 0 3px 10px rgba(0, 201, 177, 0.2);
+  }
+}

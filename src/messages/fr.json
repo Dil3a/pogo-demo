@@ -1,0 +1,50 @@
+{
+  "brand": {
+    "name": "POGO",
+    "tagline": "Trottinettes électriques du campus UEMF"
+  },
+  "nav": {
+    "map": "Carte",
+    "scan": "Scanner",
+    "history": "Trajets",
+    "wallet": "Solde",
+    "profile": "Profil"
+  },
+  "auth": {
+    "loginTitle": "Connexion",
+    "matriculeLabel": "Numéro de matricule",
+    "matriculeHint": "Votre matricule étudiant UEMF à 7 chiffres",
+    "matriculeError": "Le matricule doit comporter exactement 7 chiffres.",
+    "submit": "Se connecter",
+    "logout": "Déconnexion"
+  },
+  "ride": {
+    "reserve": "Réserver",
+    "duration": "Durée",
+    "paymentMethod": "Mode de paiement",
+    "total": "Total à régler",
+    "confirm": "Confirmer",
+    "cancel": "Annuler",
+    "unlocking": "Déverrouillage en cours",
+    "active": "Trajet en cours",
+    "end": "Terminer le trajet"
+  },
+  "payment": {
+    "card": "Carte bancaire",
+    "studentCard": "Carte étudiant",
+    "balance": "Solde",
+    "insufficient": "Solde insuffisant sur la carte étudiant pour cette durée."
+  },
+  "scooter": {
+    "available": "Disponible",
+    "occupied": "En cours",
+    "charging": "En charge",
+    "maintenance": "Maintenance",
+    "offline": "Hors-ligne"
+  },
+  "errors": {
+    "network": "Erreur réseau. Vérifiez votre connexion.",
+    "generic": "Une erreur est survenue. Réessayez.",
+    "unauthorized": "Session expirée. Reconnectez-vous."
+  }
+}

@@ -1,0 +1,29 @@
+node_modules
+.next
+.turbo
+out
+build
+dist
+
+# Local env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+
+# Test coverage
+coverage
+.nyc_output
+
+# Misc
+*.tsbuildinfo
+next-env.d.ts
