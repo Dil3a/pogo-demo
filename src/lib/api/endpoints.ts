@@ -68,11 +68,11 @@ export const rides = {
   create: (input: CreateRideInput, idempotencyKey: string) =>
     api.post<Ride>('/rides', input, { schema: RideSchema, idempotencyKey }),
 
-  unlock: (rideId: Uuid, idempotencyKey: string) =>
+  unlock: (rideId: Uuid, idempotencyKey: string, rideData?: Record<string, unknown>) =>
     api.post<Ride>(
       `/rides/${rideId}/unlock`,
-      undefined,
-      { schema: RideSchema, idempotencyKey },
+      rideData,
+      { idempotencyKey },
     ),
 
   end: (rideId: Uuid) =>

@@ -53,8 +53,8 @@ export function useCreateRide() {
 export function useUnlockRide() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ rideId, idempotencyKey }: { rideId: Uuid; idempotencyKey: string }) =>
-      rides.unlock(rideId, idempotencyKey),
+    mutationFn: ({ rideId, idempotencyKey, rideData }: { rideId: Uuid; idempotencyKey: string; rideData?: Record<string, unknown> }) =>
+      rides.unlock(rideId, idempotencyKey, rideData),
     onSuccess: (updatedRide) => {
       qc.setQueryData(rideQueryKey(updatedRide.id), updatedRide);
       qc.invalidateQueries({ queryKey: scootersQueryKey() });

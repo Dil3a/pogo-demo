@@ -36,7 +36,7 @@ export default function RidePage() {
     if (ride.status === 'reserved' && !unlockTriggered.current) {
       unlockTriggered.current = true;
       unlock.mutate(
-        { rideId: ride.id, idempotencyKey: `unlock-${ride.id}` },
+        { rideId: ride.id, idempotencyKey: `unlock-${ride.id}`, rideData: { reference: ride.reference, scooterId: ride.scooterId, scooterCode: ride.scooterCode, startStationLabel: ride.startStationLabel, durationHours: ride.durationHours, amountCentimes: ride.amountCentimes } },
         {
           onSuccess: (updatedRide) => {
             // Update cache with unlocked ride
