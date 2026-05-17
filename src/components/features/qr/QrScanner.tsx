@@ -37,7 +37,7 @@ const SCANNER_ELEMENT_ID = 'pogo-qr-reader';
 export function QrScanner({ onResult, onError }: Props) {
   const [active, setActive] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const scannerRef = useRef<{ clear: () => Promise<void> } | null>(null);
+  const scannerRef = useRef<{ clear: () => void | Promise<void> } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Clean up on unmount — the camera LED must go off.
