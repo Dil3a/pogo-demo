@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useRideStore } from '@/stores/ride.store';
 import type { Scooter, Station } from '@/types/domain';
 
-const CAMPUS_CENTER: [number, number] = [33.9716, -5.0023];
+const CAMPUS_CENTER: [number, number] = [34.04545224987241, -5.064762362913641];
 const DEFAULT_ZOOM = 16;
 
 interface Props {
