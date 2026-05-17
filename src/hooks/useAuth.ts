@@ -8,7 +8,7 @@ import type { User } from '@/types/domain';
 export function useMe() {
   const store = getClientStore();
   const [data, setData] = useState<User>(() => store.user);
-  useEffect(() => store.subscribe(() => setData({ ...store.user })), [store]);
+  useEffect(() => { const unsub = store.subscribe(() => setData({ ...store.user })); return () => { unsub(); }; }, [store]);
   return { data, isLoading: false, error: null };
 }
 
