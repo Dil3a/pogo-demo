@@ -43,7 +43,7 @@ export function getRateForHours(hours: number): number {
 // -----------------------------------------------------------------------------
 
 // Approximate UEMF campus coordinates (Fes, Morocco).
-const CAMPUS_CENTER = { lat: 34.04494255638137, lng: -5.064716632430015 };
+const CAMPUS_CENTER = { lat: 34.0449, lng: -5.0647 };
 
 function offset(deltaLat: number, deltaLng: number) {
   return { lat: CAMPUS_CENTER.lat + deltaLat, lng: CAMPUS_CENTER.lng + deltaLng };
