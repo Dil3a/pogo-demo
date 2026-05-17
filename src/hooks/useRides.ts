@@ -2,13 +2,12 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { rides, type CreateRideInput } from '@/lib/api/endpoints';
-import type { Ride, Uuid } from '@/types/domain';
+import type { Ride, Scooter, Uuid } from '@/types/domain';
 import { scootersQueryKey } from './useScooters';
 
 export const ridesQueryKey = ['rides'] as const;
 export const rideQueryKey = (id: string) => ['ride', id] as const;
 
-/** History list. */
 export function useRideHistory() {
   return useQuery({
     queryKey: ridesQueryKey,
@@ -17,13 +16,11 @@ export function useRideHistory() {
   });
 }
 
-/** Single ride — polls while active. */
 export function useRide(id: Uuid | null) {
   return useQuery({
     queryKey: rideQueryKey(id ?? ''),
     queryFn: () => rides.get(id!),
     enabled: !!id,
-    // Poll while ride is in a transient state. Real backend pushes via WS.
     refetchInterval: (q) => {
       const data = q.state.data as Ride | undefined;
       if (!data) return false;
@@ -33,15 +30,22 @@ export function useRide(id: Uuid | null) {
   });
 }
 
-/** Create reservation. Uses the caller-supplied idempotency key. */
 export function useCreateRide() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateRideInput & { idempotencyKey: string }) =>
-      rides.create({ scooterId: input.scooterId, durationHours: input.durationHours, paymentMethodId: input.paymentMethodId }, input.idempotencyKey),
-    onSuccess: () => {
-      // Scooter list is now stale.
-      qc.invalidateQueries({ queryKey: ['scooters'] });
+      rides.create(
+        { scooterId: input.scooterId, durationHours: input.durationHours, paymentMethodId: input.paymentMethodId },
+        input.idempotencyKey,
+      ),
+    onSuccess: (ride) => {
+      // Directly update the scooter status in cache — don't wait for refetch
+      qc.setQueriesData<Scooter[]>(
+        { queryKey: ['scooters'] },
+        (old) => old?.map((s) =>
+          s.id === ride.scooterId ? { ...s, status: 'occupied' as const, stationId: null } : s
+        ),
+      );
       qc.invalidateQueries({ queryKey: ridesQueryKey });
       qc.invalidateQueries({ queryKey: ['wallet'] });
       qc.invalidateQueries({ queryKey: ['me'] });
@@ -49,7 +53,6 @@ export function useCreateRide() {
   });
 }
 
-/** Unlock ride. Same idempotency key as create. */
 export function useUnlockRide() {
   const qc = useQueryClient();
   return useMutation({
@@ -60,23 +63,31 @@ export function useUnlockRide() {
       qc.invalidateQueries({ queryKey: scootersQueryKey() });
     },
     onError: () => {
-      // On unlock failure the backend has already refunded; invalidate wallet.
       qc.invalidateQueries({ queryKey: ['wallet'] });
-      qc.invalidateQueries({ queryKey: ['me'] });
       qc.invalidateQueries({ queryKey: ['scooters'] });
+      qc.invalidateQueries({ queryKey: ['me'] });
     },
   });
 }
 
-/** End an active ride. */
 export function useEndRide() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ rideId, rideData }: { rideId: Uuid; rideData?: Record<string, unknown> }) => rides.end(rideId, rideData),
+    mutationFn: ({ rideId, rideData }: { rideId: Uuid; rideData?: Record<string, unknown> }) =>
+      rides.end(rideId, rideData),
     onSuccess: (updatedRide) => {
       qc.setQueryData(rideQueryKey(updatedRide.id), updatedRide);
+      // Directly update scooter back to available in cache
+      qc.setQueriesData<Scooter[]>(
+        { queryKey: ['scooters'] },
+        (old) => old?.map((s) =>
+          s.id === updatedRide.scooterId ? { ...s, status: 'available' as const } : s
+        ),
+      );
       qc.invalidateQueries({ queryKey: ridesQueryKey });
       qc.invalidateQueries({ queryKey: ['scooters'] });
+      qc.invalidateQueries({ queryKey: ['wallet'] });
+      qc.invalidateQueries({ queryKey: ['me'] });
     },
   });
 }
