@@ -35,11 +35,14 @@ export default function RidePage() {
         {
           onSuccess: (updatedRide) => {
             setActiveRide(updatedRide);
+            // ✅ Redirect to attestation immediately after unlock
+            const encoded = btoa(JSON.stringify(updatedRide));
+            router.push(`/attestation/${updatedRide.id}?d=${encodeURIComponent(encoded)}`);
           },
         },
       );
     }
-  }, [ride, unlock, setActiveRide]);
+  }, [ride, unlock, setActiveRide, router]);
 
   if (!ride) {
     return (
@@ -59,6 +62,7 @@ export default function RidePage() {
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Header */}
       <Card className="!bg-gradient-to-br !from-pogo-50 !to-white">
         <div className="flex items-start justify-between">
           <div>
@@ -79,10 +83,11 @@ export default function RidePage() {
         </div>
       </Card>
 
+      {/* Unlocking */}
       {(isUnlocking || isFailed) && (
         <Card>
           <h2 className="mb-3 text-sm font-bold text-uemf-blue">
-            {isFailed ? 'Déverrouillage échoué' : 'Déverrouillage en cours'}
+            {isFailed ? 'Déverrouillage échoué' : 'Déverrouillage en cours — génération de l\'attestation...'}
           </h2>
           <UnlockProgress
             status={ride.status}
@@ -96,6 +101,7 @@ export default function RidePage() {
         </Card>
       )}
 
+      {/* Active ride */}
       {isActive && (
         <Card>
           <h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-uemf-blue">
@@ -124,7 +130,9 @@ export default function RidePage() {
                 const ended = await endRide.mutateAsync({ rideId: ride.id });
                 setActiveRide(ended);
                 toast.success("Trajet terminé. Merci d'avoir utilisé POGO !");
-                router.push('/map');
+                // Redirect to attestation with completed ride
+                const encoded = btoa(JSON.stringify(ended));
+                router.push(`/attestation/${ended.id}?d=${encodeURIComponent(encoded)}`);
               } catch (e) {
                 toast.error(e instanceof Error ? e.message : 'Impossible de terminer le trajet.');
               }
@@ -135,17 +143,7 @@ export default function RidePage() {
         </Card>
       )}
 
-      {isActive && ride.id && (
-        <div style={{ background:'#fff', borderRadius:'14px', border:'1px solid #e2e8f0', padding:'16px', textAlign:'center', marginBottom:'12px' }}>
-          <div style={{ fontSize:'12px', fontWeight:700, color:'#003A7A', marginBottom:'8px' }}>📄 Attestation de réservation</div>
-          <img
-            src={'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent((typeof window !== 'undefined' ? window.location.origin : '') + '/attestation/' + ride.id + '?d=' + btoa(JSON.stringify(ride))) + '&color=003A7A&margin=8'}
-            alt='QR Attestation'
-            style={{ borderRadius:'8px', marginBottom:'8px' }}
-          />
-          <div style={{ fontSize:'11px', color:'#64748b' }}>Scannez pour voir votre attestation</div>
-        </div>
-      )}
+      {/* Receipt */}
       {ride.status === 'completed' && (
         <Card>
           <h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-uemf-blue">
@@ -155,14 +153,6 @@ export default function RidePage() {
             <div className="flex justify-between">
               <dt className="text-slate-500">Trottinette</dt>
               <dd className="font-bold">{ride.scooterCode}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-slate-500">Départ</dt>
-              <dd className="font-bold">{ride.startStationLabel}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-slate-500">Arrivée</dt>
-              <dd className="font-bold">{ride.endStationLabel ?? '—'}</dd>
             </div>
             <div className="flex justify-between border-t pt-2 text-base">
               <dt className="font-semibold">Total réglé</dt>
