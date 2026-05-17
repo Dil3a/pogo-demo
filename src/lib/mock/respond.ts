@@ -70,7 +70,7 @@ export async function withIdempotency<T extends Response>(
 }
 
 /** Simulate network latency in dev so we can see loading states. */
-export async function simulateLatency(min = 100, max = 400): Promise<void> {
+export async function simulateLatency(min = 0, max = 50): Promise<void> {
   if (process.env.NODE_ENV === 'production') return;
   const ms = min + Math.random() * (max - min);
   await new Promise((r) => setTimeout(r, ms));
