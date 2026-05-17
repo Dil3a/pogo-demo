@@ -30,7 +30,7 @@ export function fail(
   message: string,
   details?: Record<string, unknown>,
 ) {
-  return cached.response as T;
+  return NextResponse.json(
     {
       error: { code, message, ...(details ? { details } : {}) },
       meta: { requestId: requestId(), timestamp: new Date().toISOString() },
@@ -55,7 +55,7 @@ export async function withIdempotency<T extends Response>(
   const cached = store.idempotency.get(key);
   const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
   if (cached && Date.now() - cached.at < TWENTY_FOUR_HOURS) {
-    return NextResponse.json(cached.response, { status: 200 }) as T;
+    return cached.response as T;
   }
   const response = await compute();
   // Clone to read body without consuming the original stream.
