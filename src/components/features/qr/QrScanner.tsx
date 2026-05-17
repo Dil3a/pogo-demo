@@ -80,7 +80,7 @@ export function QrScanner({ onResult, onError }: Props) {
           if (code) {
             instance.stop().then(() => {
               setActive(false);
-              onResult(code.text);
+              onResult(code.scooterCode);
             });
           }
         },
