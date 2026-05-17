@@ -1,9 +1,5 @@
 'use client';
 
-/**
- * RidePanel — the reservation funnel as a bottom-sheet / dialog.
- */
-
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -27,6 +23,7 @@ export function RidePanel() {
     idempotencyKey,
     setDuration,
     setPaymentMethod,
+    regenerateIdempotencyKey,
     reset,
   } = useRideStore();
 
@@ -51,16 +48,22 @@ export function RidePanel() {
   if (!selectedScooter) return null;
 
   async function confirm() {
-    if (!selectedScooter || !idempotencyKey) return;
+    if (!selectedScooter) return;
 
-    // Find the payment method — use first available if not found
-    let method = methods?.find((m) => m.type === paymentMethod);
-    if (!method && methods && methods.length > 0) {
-      method = methods[0];
-    }
+    // Always use a fresh key so retries never get a cached response
+    regenerateIdempotencyKey();
+
+    // Wait a tick for the new key to propagate
+    await new Promise((r) => setTimeout(r, 10));
+
+    const freshKey = useRideStore.getState().idempotencyKey;
+
+    // Find the matching payment method
+    const method =
+      methods?.find((m) => m.type === paymentMethod) ?? methods?.[0];
+
     if (!method) {
-      // If methods still not loaded, retry after a short delay
-      toast.error('Chargement en cours, réessayez dans un instant.');
+      toast.error('Chargement des moyens de paiement, réessayez.');
       return;
     }
 
@@ -69,14 +72,16 @@ export function RidePanel() {
         scooterId: selectedScooter.id,
         durationHours,
         paymentMethodId: method.id,
-        idempotencyKey,
+        idempotencyKey: freshKey ?? crypto.randomUUID(),
       });
       toast.success(`Réservation confirmée — ${selectedScooter.code}`);
       reset();
       router.push(`/ride/${ride.id}`);
     } catch (e) {
+      // Regenerate key so the next attempt is fresh
+      regenerateIdempotencyKey();
       toast.error(
-        e instanceof Error ? e.message : 'Impossible de réserver la trottinette.',
+        e instanceof Error ? e.message : 'Impossible de réserver. Réessayez.',
       );
     }
   }
