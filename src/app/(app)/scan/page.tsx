@@ -14,7 +14,8 @@
  * is damaged. Same code → same endpoint → same flow.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Keyboard, Camera } from 'lucide-react';
@@ -27,7 +28,17 @@ import { useRideStore } from '@/stores/ride.store';
 
 export default function ScanPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const selectScooter = useRideStore((s) => s.selectScooter);
+
+  // Handle QR code URL params (from printed QR stickers)
+  useEffect(() => {
+    const code = searchParams.get('code');
+    if (code) {
+      handleCode(code);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [manualMode, setManualMode] = useState(false);
   const [manualCode, setManualCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
