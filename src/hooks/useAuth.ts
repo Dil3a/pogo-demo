@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { getClientStore } from '@/lib/client-store';
 import { useAuthStore } from '@/stores/auth.store';
 import type { User } from '@/types/domain';
@@ -8,12 +9,15 @@ import type { User } from '@/types/domain';
 export function useMe() {
   const store = getClientStore();
   const [data, setData] = useState<User>(() => store.user);
-  useEffect(() => { const unsub = store.subscribe(() => setData({ ...store.user })); return () => { unsub(); }; }, [store]);
+  useEffect(() => {
+    const unsub = store.subscribe(() => setData({ ...store.user }));
+    return () => { unsub(); };
+  }, [store]);
   return { data, isLoading: false, error: null };
 }
 
 export function useLoginWithMatricule() {
-  const { setUser, setAuthenticated } = useAuthStore();
+  const { setUser } = useAuthStore();
   const [isPending, setIsPending] = useState(false);
 
   const mutateAsync = useCallback(async (matricule: string): Promise<User> => {
@@ -25,22 +29,23 @@ export function useLoginWithMatricule() {
       }
       const user = getClientStore().login(matricule);
       setUser(user);
-      setAuthenticated(true);
       return user;
     } finally {
       setIsPending(false);
     }
-  }, [setUser, setAuthenticated]);
+  }, [setUser]);
 
   return { mutateAsync, isPending };
 }
 
 export function useLogout() {
-  const { clearUser } = useAuthStore();
+  const { clear } = useAuthStore();
+  const router = useRouter();
 
   const mutate = useCallback(() => {
-    clearUser();
-  }, [clearUser]);
+    clear();
+    router.push('/login');
+  }, [clear, router]);
 
   return { mutate };
 }
