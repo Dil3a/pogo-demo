@@ -30,7 +30,7 @@ export function fail(
   message: string,
   details?: Record<string, unknown>,
 ) {
-  return NextResponse.json(
+  return cached.response as T;
     {
       error: { code, message, ...(details ? { details } : {}) },
       meta: { requestId: requestId(), timestamp: new Date().toISOString() },
