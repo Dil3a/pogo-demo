@@ -10,28 +10,23 @@
  * For now this is a stub that just bounces to /map. See ARCHITECTURE.md §6
  * for the full SSO sequence diagram.
  */
+"use client"
 
+import { useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function CallbackPage() {
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const params = useSearchParams();
 
   useEffect(() => {
-    const next = params.get('next') ?? '/map';
-    // In real impl: POST artefact to /api/auth/sso/callback, then router.replace(next).
-    const t = setTimeout(() => router.replace(next), 600);
-    return () => clearTimeout(t);
-  }, [router, params]);
+    const code = searchParams.get('code');
+    if (code) {
+      // Handle OAuth callback - for now just redirect to home
+      router.push('/map');
+    }
+  }, [searchParams, router]);
 
-  return (
-    <div className="flex min-h-dvh items-center justify-center text-slate-600">
-      <div className="flex flex-col items-center gap-3">
-        <Loader2 className="h-7 w-7 animate-spin text-pogo-500" />
-        <p className="text-sm">Connexion en cours…</p>
-      </div>
-    </div>
-  );
+  return <div style={{ textAlign: 'center', padding: '40px' }}>Processing callback...</div>;
 }
