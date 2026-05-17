@@ -133,7 +133,7 @@ export function Modal({
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? 'modal-title' : undefined}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-uemf-blue/25 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-[200] flex items-end justify-center bg-uemf-blue/25 backdrop-blur-sm sm:items-center"
       onClick={onClose}
     >
       <div

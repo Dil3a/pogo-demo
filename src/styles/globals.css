@@ -42,3 +42,30 @@
     box-shadow: 0 3px 10px rgba(0, 201, 177, 0.2);
   }
 }
+
+/* Fix Leaflet map z-index — prevents map panes from overlapping modals/dialogs */
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-map-pane svg,
+.leaflet-map-pane canvas {
+  z-index: auto !important;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 10 !important;
+}
+
+.leaflet-control {
+  z-index: 10 !important;
+}
+
+/* Ensure modal/dialog always appears above the map */
+[role="dialog"],
+[data-radix-dialog-overlay],
+[data-radix-dialog-content] {
+  z-index: 100 !important;
+}
