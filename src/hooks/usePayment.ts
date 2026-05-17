@@ -18,6 +18,6 @@ export function useWallet() {
   return useQuery({
     queryKey: walletQueryKey,
     queryFn: payments.getWallet,
-    staleTime: 10 * 1000,
+    staleTime: 0,
   });
 }
