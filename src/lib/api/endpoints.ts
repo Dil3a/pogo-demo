@@ -75,8 +75,8 @@ export const rides = {
       { idempotencyKey },
     ),
 
-  end: (rideId: Uuid) =>
-    api.post<Ride>(`/rides/${rideId}/end`, undefined, { schema: RideSchema }),
+  end: (rideId: Uuid, rideData?: Record<string, unknown>) =>
+    api.post<Ride>(`/rides/${rideId}/end`, rideData),
 };
 
 // -----------------------------------------------------------------------------

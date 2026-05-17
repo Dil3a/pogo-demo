@@ -141,7 +141,7 @@ export default function RidePage() {
             loading={endRide.isPending}
             onClick={async () => {
               try {
-                const ended = await endRide.mutateAsync(ride.id);
+                const ended = await endRide.mutateAsync({ rideId: ride.id, rideData: { reference: ride.reference, scooterId: ride.scooterId, scooterCode: ride.scooterCode, startStationLabel: ride.startStationLabel, durationHours: ride.durationHours, amountCentimes: ride.amountCentimes, reservedAt: ride.reservedAt, startedAt: ride.startedAt, expiresAt: ride.expiresAt } });
                 setActiveRide(ended);
                 toast.success('Trajet terminé. Merci d\u2019avoir utilisé POGO !');
               } catch (e) {

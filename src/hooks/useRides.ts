@@ -72,7 +72,7 @@ export function useUnlockRide() {
 export function useEndRide() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (rideId: Uuid) => rides.end(rideId),
+    mutationFn: ({ rideId, rideData }: { rideId: Uuid; rideData?: Record<string, unknown> }) => rides.end(rideId, rideData),
     onSuccess: (updatedRide) => {
       qc.setQueryData(rideQueryKey(updatedRide.id), updatedRide);
       qc.invalidateQueries({ queryKey: ridesQueryKey });

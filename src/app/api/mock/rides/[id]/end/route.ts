@@ -1,5 +1,6 @@
-import { fail, ok, simulateLatency } from '@/lib/mock/respond';
+import { ok, simulateLatency } from '@/lib/mock/respond';
 import { store } from '@/lib/mock/store';
+import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,36 +8,48 @@ interface RouteContext {
   params: { id: string };
 }
 
-/**
- * POST /api/mock/rides/:id/end
- *
- * Ends an active ride. The scooter is parked at its nearest station (mocked
- * as the first available station). In production, the scooter publishes a
- * lock event when the user manually re-locks it.
- */
-export async function POST(_request: Request, { params }: RouteContext) {
-  await simulateLatency();
+export async function POST(request: Request, { params }: RouteContext) {
+  await simulateLatency(0, 100);
+
+  const body = await request.json().catch(() => ({}));
   const ride = store.rides.find((r) => r.id === params.id);
-  if (!ride) return fail(404, 'RIDE_NOT_FOUND', 'Course introuvable');
-  if (ride.status !== 'active') {
-    return fail(409, 'INVALID_RIDE_STATE', 'Cette course n\u2019est pas active');
+  const station = store.stations.find((s) => s.isActive);
+
+  // If ride not found (different serverless instance), construct completed ride from body
+  if (!ride) {
+    const completedRide = {
+      id: params.id,
+      reference: body.reference ?? `TRT-${Date.now()}`,
+      userId: store.user.id,
+      scooterId: body.scooterId ?? 'unknown',
+      scooterCode: body.scooterCode ?? 'T-??',
+      startStationLabel: body.startStationLabel ?? 'Campus UEMF',
+      endStationLabel: station?.label ?? 'Entrée principale',
+      status: 'completed' as const,
+      durationHours: body.durationHours ?? 1,
+      amountCentimes: body.amountCentimes ?? 500,
+      reservedAt: body.reservedAt ?? new Date().toISOString(),
+      startedAt: body.startedAt ?? new Date().toISOString(),
+      endedAt: new Date().toISOString(),
+      expiresAt: body.expiresAt ?? new Date().toISOString(),
+    };
+    return NextResponse.json({
+      data: completedRide,
+      meta: { requestId: 'req_mock', timestamp: new Date().toISOString() },
+    });
   }
 
   ride.status = 'completed';
   ride.endedAt = new Date().toISOString();
 
   const scooter = store.scooters.find((s) => s.id === ride.scooterId);
-  if (scooter) {
-    // Mock: return scooter to its starting station (or first active station).
-    const station = store.stations.find((s) => s.isActive);
+  if (scooter && station) {
     scooter.status = 'available';
-    if (station) {
-      scooter.stationId = station.id;
-      scooter.stationLabel = station.label;
-      scooter.lat = station.lat;
-      scooter.lng = station.lng;
-      ride.endStationLabel = station.label;
-    }
+    scooter.stationId = station.id;
+    scooter.stationLabel = station.label;
+    scooter.lat = station.lat;
+    scooter.lng = station.lng;
+    ride.endStationLabel = station.label;
   }
 
   return ok(ride);
