@@ -1,55 +1,56 @@
 'use client';
 
-/**
- * Providers — wraps the app in TanStack Query, Sonner (toasts), and any
- * future context providers.
- *
- * QueryClient is memoized via useState so it survives Fast Refresh in dev
- * without losing cached data.
- */
-
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 
-export function Providers({ children }: { children: ReactNode }) {
-  const [client] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            // Stations / rate cards rarely change — staleTime keeps the
-            // network quiet during a typical 5-minute session.
-            staleTime: 30 * 1000,
-            retry: (failureCount, error) => {
-              // Don't retry on 4xx — those errors are client-fixable.
-              if (error instanceof Error && /^4\d{2}$/.test(error.message)) {
-                return false;
-              }
-              return failureCount < 2;
-            },
-            refetchOnWindowFocus: false,
-          },
-          mutations: {
-            // No retry: mutations are idempotent at the API level via
-            // Idempotency-Key, so we let the user decide when to retry.
-            retry: false,
-          },
+function makeQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        // Don't retry on 4xx errors - they're not transient
+        retry: (failureCount, error: unknown) => {
+          if (error instanceof Error && error.message.includes('4')) return false;
+          return failureCount < 2;
         },
-      }),
-  );
+        retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
+        // Don't refetch on window focus - reduces unnecessary requests
+        refetchOnWindowFocus: false,
+        // Keep data fresh for 30s by default
+        staleTime: 30 * 1000,
+        // Keep unused data in cache for 5 minutes
+        gcTime: 5 * 60 * 1000,
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+  });
+}
+
+let browserQueryClient: QueryClient | undefined;
+
+function getQueryClient() {
+  if (typeof window === 'undefined') {
+    // Server: always make a new query client
+    return makeQueryClient();
+  }
+  // Browser: reuse the same client
+  if (!browserQueryClient) browserQueryClient = makeQueryClient();
+  return browserQueryClient;
+}
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  const queryClient = getQueryClient();
 
   return (
-    <QueryClientProvider client={client}>
+    <QueryClientProvider client={queryClient}>
       {children}
       <Toaster
         position="top-center"
-        toastOptions={{
-          style: {
-            fontFamily: 'inherit',
-            border: '1px solid #dde4f0',
-          },
-        }}
+        richColors
+        closeButton
+        duration={3000}
       />
     </QueryClientProvider>
   );

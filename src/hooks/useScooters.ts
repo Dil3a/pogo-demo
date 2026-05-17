@@ -8,31 +8,33 @@ export const stationsQueryKey = ['stations'] as const;
 export const scootersQueryKey = (status?: ScooterStatus) =>
   ['scooters', status ?? 'all'] as const;
 
-/** All stations with live available counts. Cached longer — stations are static. */
 export function useStations() {
   return useQuery({
     queryKey: stationsQueryKey,
     queryFn: fleet.listStations,
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: 30 * 1000,       // cache 30s
+    gcTime: 5 * 60 * 1000,      // keep in memory 5min
+    refetchOnWindowFocus: false,
   });
 }
 
-/** All scooters, optionally filtered by status. */
 export function useScooters(status?: 'available' | 'occupied' | 'charging') {
   return useQuery({
     queryKey: scootersQueryKey(status),
     queryFn: () => fleet.listScooters(status ? { status } : undefined),
-    // Short staleTime — availability changes constantly. Real backend pushes via WS.
-    staleTime: 5 * 1000,
-    refetchInterval: 15 * 1000, // poll fallback when WS is off
+    staleTime: 10 * 1000,
+    gcTime: 2 * 60 * 1000,
+    refetchInterval: 30 * 1000,  // reduced from 15s to 30s
+    refetchOnWindowFocus: false,
   });
 }
 
-/** Single scooter (UUID or code). */
 export function useScooter(idOrCode: string | null) {
   return useQuery({
     queryKey: ['scooter', idOrCode],
     queryFn: () => fleet.getScooter(idOrCode!),
     enabled: !!idOrCode,
+    staleTime: 5 * 1000,
+    refetchOnWindowFocus: false,
   });
 }

@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Maps a scooter's machine-readable status to a French-labelled coloured pill.
  * Centralised here so the mapping is consistent across cards, lists, and admin.

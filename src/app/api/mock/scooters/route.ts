@@ -4,14 +4,8 @@ import { ScooterStatusSchema } from '@/types/domain';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * GET /api/mock/scooters?status=available
- *
- * Filterable list. In the real backend this would also support cursor pagination
- * and bbox-based filtering for the map viewport.
- */
 export async function GET(request: Request) {
-  await simulateLatency();
+  await simulateLatency(0, 50);
   const { searchParams } = new URL(request.url);
   const statusParam = searchParams.get('status');
   const status = statusParam ? ScooterStatusSchema.safeParse(statusParam) : null;
@@ -20,5 +14,7 @@ export async function GET(request: Request) {
   if (status?.success) {
     scooters = scooters.filter((s) => s.status === status.data);
   }
-  return ok(scooters);
+  const response = ok(scooters);
+  response.headers.set('Cache-Control', 's-maxage=5, stale-while-revalidate=15');
+  return response;
 }
