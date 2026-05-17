@@ -1,40 +1,29 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { fleet } from '@/lib/api/endpoints';
-import type { ScooterStatus } from '@/types/domain';
-
-export const stationsQueryKey = ['stations'] as const;
-export const scootersQueryKey = (status?: ScooterStatus) =>
-  ['scooters', status ?? 'all'] as const;
+import { useEffect, useState } from 'react';
+import { getClientStore } from '@/lib/client-store';
+import type { Scooter, Station } from '@/types/domain';
 
 export function useStations() {
-  return useQuery({
-    queryKey: stationsQueryKey,
-    queryFn: fleet.listStations,
-    staleTime: 30 * 1000,       // cache 30s
-    gcTime: 5 * 60 * 1000,      // keep in memory 5min
-    refetchOnWindowFocus: false,
-  });
+  const store = getClientStore();
+  const [data, setData] = useState<Station[]>(() => store.getStations());
+  useEffect(() => store.subscribe(() => setData(store.getStations())), [store]);
+  return { data, isLoading: false, error: null };
 }
 
 export function useScooters(status?: 'available' | 'occupied' | 'charging') {
-  return useQuery({
-    queryKey: scootersQueryKey(status),
-    queryFn: () => fleet.listScooters(status ? { status } : undefined),
-    staleTime: 10 * 1000,
-    gcTime: 2 * 60 * 1000,
-    refetchInterval: 30 * 1000,  // reduced from 15s to 30s
-    refetchOnWindowFocus: false,
-  });
+  const store = getClientStore();
+  const [data, setData] = useState<Scooter[]>(() => store.getScooters(status));
+  useEffect(() => store.subscribe(() => setData(store.getScooters(status))), [store, status]);
+  return { data, isLoading: false, error: null };
 }
 
-export function useScooter(idOrCode: string | null) {
-  return useQuery({
-    queryKey: ['scooter', idOrCode],
-    queryFn: () => fleet.getScooter(idOrCode!),
-    enabled: !!idOrCode,
-    staleTime: 5 * 1000,
-    refetchOnWindowFocus: false,
-  });
+export function useScooter(id: string | null) {
+  const store = getClientStore();
+  const [data, setData] = useState(() => id ? store.scooters.find((s) => s.id === id) : null);
+  useEffect(() => store.subscribe(() => setData(id ? store.scooters.find((s) => s.id === id) ?? null : null)), [store, id]);
+  return { data, isLoading: false, error: null };
 }
+
+export const stationsQueryKey = ['stations'] as const;
+export const scootersQueryKey = (status?: string) => ['scooters', status ?? 'all'] as const;

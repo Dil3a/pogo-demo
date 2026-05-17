@@ -16,16 +16,11 @@ export default function RidePage() {
   const params = useParams<{ id: string }>();
   const rideId = params.id;
 
-  // Try store cache first — avoids serverless cold-start refetch issues
   const cachedRide = useRideStore((s) => s.activeRide);
   const setActiveRide = useRideStore((s) => s.setActiveRide);
 
-  // Only fetch from API if the ride isn't in the store cache
-  const { data: fetchedRide, isLoading } = useRide(
-    cachedRide?.id === rideId ? null : rideId,
-  );
-
-  const ride = cachedRide?.id === rideId ? cachedRide : fetchedRide;
+  const { data: storeRide } = useRide(rideId);
+  const ride = storeRide ?? (cachedRide?.id === rideId ? cachedRide : null);
 
   const unlock = useUnlockRide();
   const endRide = useEndRide();
@@ -36,10 +31,9 @@ export default function RidePage() {
     if (ride.status === 'reserved' && !unlockTriggered.current) {
       unlockTriggered.current = true;
       unlock.mutate(
-        { rideId: ride.id, idempotencyKey: `unlock-${ride.id}`, rideData: { reference: ride.reference, scooterId: ride.scooterId, scooterCode: ride.scooterCode, startStationLabel: ride.startStationLabel, durationHours: ride.durationHours, amountCentimes: ride.amountCentimes } },
+        { rideId: ride.id, idempotencyKey: `unlock-${ride.id}` },
         {
           onSuccess: (updatedRide) => {
-            // Update cache with unlocked ride
             setActiveRide(updatedRide);
           },
         },
@@ -47,17 +41,6 @@ export default function RidePage() {
     }
   }, [ride, unlock, setActiveRide]);
 
-  // Show loading only if we have no cached data AND still fetching
-  if (!ride && isLoading) {
-    return (
-      <div className="flex flex-col gap-4">
-        <div className="h-32 animate-pulse rounded-2xl bg-slate-200" />
-        <div className="h-48 animate-pulse rounded-2xl bg-slate-200" />
-      </div>
-    );
-  }
-
-  // If no ride found anywhere, go back to map
   if (!ride) {
     return (
       <div className="flex flex-col items-center gap-4 p-8 text-center">
@@ -76,7 +59,6 @@ export default function RidePage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Header */}
       <Card className="!bg-gradient-to-br !from-pogo-50 !to-white">
         <div className="flex items-start justify-between">
           <div>
@@ -97,7 +79,6 @@ export default function RidePage() {
         </div>
       </Card>
 
-      {/* Unlocking */}
       {(isUnlocking || isFailed) && (
         <Card>
           <h2 className="mb-3 text-sm font-bold text-uemf-blue">
@@ -105,7 +86,7 @@ export default function RidePage() {
           </h2>
           <UnlockProgress
             status={ride.status}
-            failureReason={isFailed ? 'La trottinette n\u2019a pas répondu à temps.' : undefined}
+            failureReason={isFailed ? "La trottinette n'a pas répondu à temps." : undefined}
           />
           {isFailed && (
             <Button variant="secondary" fullWidth className="mt-4" onClick={() => router.push('/map')}>
@@ -115,7 +96,6 @@ export default function RidePage() {
         </Card>
       )}
 
-      {/* Active ride */}
       {isActive && (
         <Card>
           <h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-uemf-blue">
@@ -141,9 +121,10 @@ export default function RidePage() {
             loading={endRide.isPending}
             onClick={async () => {
               try {
-                const ended = await endRide.mutateAsync({ rideId: ride.id, rideData: { reference: ride.reference, scooterId: ride.scooterId, scooterCode: ride.scooterCode, startStationLabel: ride.startStationLabel, durationHours: ride.durationHours, amountCentimes: ride.amountCentimes, reservedAt: ride.reservedAt, startedAt: ride.startedAt, expiresAt: ride.expiresAt } });
+                const ended = await endRide.mutateAsync({ rideId: ride.id });
                 setActiveRide(ended);
-                toast.success('Trajet terminé. Merci d\u2019avoir utilisé POGO !');
+                toast.success("Trajet terminé. Merci d'avoir utilisé POGO !");
+                router.push('/map');
               } catch (e) {
                 toast.error(e instanceof Error ? e.message : 'Impossible de terminer le trajet.');
               }
@@ -154,7 +135,6 @@ export default function RidePage() {
         </Card>
       )}
 
-      {/* Receipt */}
       {ride.status === 'completed' && (
         <Card>
           <h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-uemf-blue">
@@ -163,15 +143,15 @@ export default function RidePage() {
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between">
               <dt className="text-slate-500">Trottinette</dt>
-              <dd className="font-bold text-slate-800">{ride.scooterCode}</dd>
+              <dd className="font-bold">{ride.scooterCode}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-slate-500">Départ</dt>
-              <dd className="font-bold text-slate-800">{ride.startStationLabel}</dd>
+              <dd className="font-bold">{ride.startStationLabel}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-slate-500">Arrivée</dt>
-              <dd className="font-bold text-slate-800">{ride.endStationLabel ?? '—'}</dd>
+              <dd className="font-bold">{ride.endStationLabel ?? '—'}</dd>
             </div>
             <div className="flex justify-between border-t pt-2 text-base">
               <dt className="font-semibold">Total réglé</dt>

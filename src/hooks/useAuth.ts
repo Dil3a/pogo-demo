@@ -1,67 +1,46 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
-import { auth } from '@/lib/api/endpoints';
+import { useEffect, useState, useCallback } from 'react';
+import { getClientStore } from '@/lib/client-store';
 import { useAuthStore } from '@/stores/auth.store';
-import { ApiClientError } from '@/lib/api/client';
+import type { User } from '@/types/domain';
 
-export const meQueryKey = ['me'] as const;
-
-/**
- * Fetch the current user.
- *
- * On success the user is mirrored into the auth store so non-component code
- * (e.g. the WebSocket connector) can read it without a hook.
- */
 export function useMe() {
-  const setUser = useAuthStore((s) => s.setUser);
-  const query = useQuery({
-    queryKey: meQueryKey,
-    queryFn: auth.me,
-    // Don't retry on 401 — that's the signal to redirect to login.
-    retry: (failureCount, error) => {
-      if (error instanceof ApiClientError && error.status === 401) return false;
-      return failureCount < 2;
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  // Mirror server state into client store.
-  useEffect(() => {
-    if (query.data) setUser(query.data);
-    else if (query.error instanceof ApiClientError && query.error.status === 401) {
-      setUser(null);
-    }
-  }, [query.data, query.error, setUser]);
-
-  return query;
+  const store = getClientStore();
+  const [data, setData] = useState<User>(() => store.user);
+  useEffect(() => store.subscribe(() => setData({ ...store.user })), [store]);
+  return { data, isLoading: false, error: null };
 }
 
-/** Matricule login mutation. Used by the fallback login form. */
 export function useLoginWithMatricule() {
-  const qc = useQueryClient();
-  const setUser = useAuthStore((s) => s.setUser);
+  const { setUser, setAuthenticated } = useAuthStore();
+  const [isPending, setIsPending] = useState(false);
 
-  return useMutation({
-    mutationFn: auth.loginWithMatricule,
-    onSuccess: (user) => {
+  const mutateAsync = useCallback(async (matricule: string): Promise<User> => {
+    setIsPending(true);
+    try {
+      await new Promise((r) => setTimeout(r, 300));
+      if (!/^\d{7}$/.test(matricule)) {
+        throw new Error('Le matricule doit comporter exactement 7 chiffres');
+      }
+      const user = getClientStore().login(matricule);
       setUser(user);
-      qc.setQueryData(meQueryKey, user);
-    },
-  });
+      setAuthenticated(true);
+      return user;
+    } finally {
+      setIsPending(false);
+    }
+  }, [setUser, setAuthenticated]);
+
+  return { mutateAsync, isPending };
 }
 
-/** Logout — clears server session, then local stores. */
 export function useLogout() {
-  const qc = useQueryClient();
-  const clear = useAuthStore((s) => s.clear);
+  const { clearUser } = useAuthStore();
 
-  return useMutation({
-    mutationFn: auth.logout,
-    onSettled: () => {
-      clear();
-      qc.clear();
-    },
-  });
+  const mutate = useCallback(() => {
+    clearUser();
+  }, [clearUser]);
+
+  return { mutate };
 }

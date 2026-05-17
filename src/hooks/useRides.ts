@@ -1,93 +1,100 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { rides, type CreateRideInput } from '@/lib/api/endpoints';
-import type { Ride, Scooter, Uuid } from '@/types/domain';
-import { scootersQueryKey } from './useScooters';
+import { useState, useCallback } from 'react';
+import { getClientStore } from '@/lib/client-store';
+import type { Ride, Uuid } from '@/types/domain';
 
 export const ridesQueryKey = ['rides'] as const;
 export const rideQueryKey = (id: string) => ['ride', id] as const;
 
 export function useRideHistory() {
-  return useQuery({
-    queryKey: ridesQueryKey,
-    queryFn: rides.list,
-    staleTime: 30 * 1000,
-  });
+  const store = getClientStore();
+  const [data, setData] = useState<Ride[]>(() => [...store.rides]);
+  useState(() => store.subscribe(() => setData([...store.rides])));
+  return { data, isLoading: false, error: null };
 }
 
 export function useRide(id: Uuid | null) {
-  return useQuery({
-    queryKey: rideQueryKey(id ?? ''),
-    queryFn: () => rides.get(id!),
-    enabled: !!id,
-    refetchInterval: (q) => {
-      const data = q.state.data as Ride | undefined;
-      if (!data) return false;
-      const isTransient = data.status === 'reserved' || data.status === 'unlocking' || data.status === 'active';
-      return isTransient ? 3000 : false;
-    },
-  });
+  const store = getClientStore();
+  const [data, setData] = useState<Ride | undefined>(() =>
+    id ? store.rides.find((r) => r.id === id) : undefined
+  );
+  useState(() => store.subscribe(() =>
+    setData(id ? store.rides.find((r) => r.id === id) : undefined)
+  ));
+  return { data, isLoading: false, error: null };
 }
 
 export function useCreateRide() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: CreateRideInput & { idempotencyKey: string }) =>
-      rides.create(
-        { scooterId: input.scooterId, durationHours: input.durationHours, paymentMethodId: input.paymentMethodId },
-        input.idempotencyKey,
-      ),
-    onSuccess: (ride) => {
-      // Directly update the scooter status in cache — don't wait for refetch
-      qc.setQueriesData<Scooter[]>(
-        { queryKey: ['scooters'] },
-        (old) => old?.map((s) =>
-          s.id === ride.scooterId ? { ...s, status: 'occupied' as const, stationId: null } : s
-        ),
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const mutateAsync = useCallback(async (input: {
+    scooterId: string;
+    durationHours: 1 | 2 | 4;
+    paymentMethodId: string;
+    idempotencyKey: string;
+  }): Promise<Ride> => {
+    setIsPending(true);
+    setError(null);
+    try {
+      // Small delay to show loading state
+      await new Promise((r) => setTimeout(r, 300));
+      const ride = getClientStore().createRide(
+        input.scooterId,
+        input.durationHours,
+        input.paymentMethodId,
       );
-      qc.invalidateQueries({ queryKey: ridesQueryKey });
-      qc.invalidateQueries({ queryKey: ['wallet'] });
-      qc.invalidateQueries({ queryKey: ['me'] });
-    },
-  });
+      return ride;
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error('Erreur inconnue');
+      setError(err);
+      throw err;
+    } finally {
+      setIsPending(false);
+    }
+  }, []);
+
+  return { mutateAsync, isPending, error };
 }
 
 export function useUnlockRide() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ rideId, idempotencyKey, rideData }: { rideId: Uuid; idempotencyKey: string; rideData?: Record<string, unknown> }) =>
-      rides.unlock(rideId, idempotencyKey, rideData),
-    onSuccess: (updatedRide) => {
-      qc.setQueryData(rideQueryKey(updatedRide.id), updatedRide);
-      qc.invalidateQueries({ queryKey: scootersQueryKey() });
-    },
-    onError: () => {
-      qc.invalidateQueries({ queryKey: ['wallet'] });
-      qc.invalidateQueries({ queryKey: ['scooters'] });
-      qc.invalidateQueries({ queryKey: ['me'] });
-    },
-  });
+  const [isPending, setIsPending] = useState(false);
+
+  const mutate = useCallback(async (
+    input: { rideId: string; idempotencyKey: string; rideData?: Record<string, unknown> },
+    options?: { onSuccess?: (ride: Ride) => void; onError?: (e: Error) => void }
+  ) => {
+    setIsPending(true);
+    try {
+      await new Promise((r) => setTimeout(r, 800));
+      const ride = getClientStore().unlockRide(input.rideId);
+      options?.onSuccess?.(ride);
+    } catch (e) {
+      options?.onError?.(e instanceof Error ? e : new Error('Erreur'));
+    } finally {
+      setIsPending(false);
+    }
+  }, []);
+
+  return { mutate, isPending };
 }
 
 export function useEndRide() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ rideId, rideData }: { rideId: Uuid; rideData?: Record<string, unknown> }) =>
-      rides.end(rideId, rideData),
-    onSuccess: (updatedRide) => {
-      qc.setQueryData(rideQueryKey(updatedRide.id), updatedRide);
-      // Directly update scooter back to available in cache
-      qc.setQueriesData<Scooter[]>(
-        { queryKey: ['scooters'] },
-        (old) => old?.map((s) =>
-          s.id === updatedRide.scooterId ? { ...s, status: 'available' as const } : s
-        ),
-      );
-      qc.invalidateQueries({ queryKey: ridesQueryKey });
-      qc.invalidateQueries({ queryKey: ['scooters'] });
-      qc.invalidateQueries({ queryKey: ['wallet'] });
-      qc.invalidateQueries({ queryKey: ['me'] });
-    },
-  });
+  const [isPending, setIsPending] = useState(false);
+
+  const mutateAsync = useCallback(async (input: {
+    rideId: string;
+    rideData?: Record<string, unknown>;
+  }): Promise<Ride> => {
+    setIsPending(true);
+    try {
+      await new Promise((r) => setTimeout(r, 400));
+      return getClientStore().endRide(input.rideId);
+    } finally {
+      setIsPending(false);
+    }
+  }, []);
+
+  return { mutateAsync, isPending };
 }
