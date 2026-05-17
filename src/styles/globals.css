@@ -43,17 +43,6 @@
   }
 }
 
-/* Fix Leaflet map z-index — prevents map panes from overlapping modals/dialogs */
-.leaflet-pane,
-.leaflet-tile,
-.leaflet-marker-icon,
-.leaflet-marker-shadow,
-.leaflet-tile-container,
-.leaflet-map-pane svg,
-.leaflet-map-pane canvas {
-  z-index: auto !important;
-}
-
 .leaflet-top,
 .leaflet-bottom {
   z-index: 10 !important;

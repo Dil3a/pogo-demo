@@ -80,7 +80,7 @@ export default function MapPage() {
 
       {/* Map */}
       <Card className="!p-0 overflow-hidden">
-        <div className="h-[420px] w-full">
+        <div className="h-[420px] w-full" style={{ isolation: "isolate", position: "relative", zIndex: 0 }}>
           {stationsLoading || scootersLoading ? (
             <Skeleton className="h-full w-full !rounded-none" />
           ) : (
