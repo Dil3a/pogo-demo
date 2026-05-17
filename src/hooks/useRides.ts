@@ -62,6 +62,7 @@ export function useUnlockRide() {
     onError: () => {
       // On unlock failure the backend has already refunded; invalidate wallet.
       qc.invalidateQueries({ queryKey: ['wallet'] });
+      qc.invalidateQueries({ queryKey: ['me'] });
       qc.invalidateQueries({ queryKey: ['scooters'] });
     },
   });
