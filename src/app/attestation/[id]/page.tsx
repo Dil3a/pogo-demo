@@ -1,12 +1,12 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { getClientStore } from '@/lib/client-store';
 import type { Ride } from '@/types/domain';
 import { formatMoney } from '@/lib/format/money';
 
-function fmtDT(ts: string | null | number) {
+function fmtDT(ts: string | null | number | undefined) {
   if (!ts) return '—';
   return new Date(ts).toLocaleString('fr-FR', {
     day: '2-digit', month: 'long', year: 'numeric',
@@ -16,15 +16,32 @@ function fmtDT(ts: string | null | number) {
 
 export default function AttestationPage() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const [ride, setRide] = useState<Ride | null>(null);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
+    // Strategy 1: decode ride data from URL params (works across sessions/devices)
+    const encoded = searchParams.get('d');
+    if (encoded) {
+      try {
+        const decoded = JSON.parse(atob(encoded));
+        setRide(decoded as Ride);
+        return;
+      } catch {
+        // fall through to strategy 2
+      }
+    }
+
+    // Strategy 2: look up from local store (same session only)
     const store = getClientStore();
     const found = store.rides.find((r) => r.id === params.id);
-    if (found) setRide(found);
-    else setNotFound(true);
-  }, [params.id]);
+    if (found) {
+      setRide(found);
+    } else {
+      setNotFound(true);
+    }
+  }, [params.id, searchParams]);
 
   if (notFound) return (
     <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'#f0f4f8', padding:'24px', textAlign:'center' }}>
@@ -106,14 +123,14 @@ export default function AttestationPage() {
           <button onClick={() => window.print()} style={{ flex:1, height:'48px', borderRadius:'14px', background:'linear-gradient(135deg,#003A7A,#1a8a3a)', color:'#fff', fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:'14px', border:'none', cursor:'pointer' }}>
             🖨️ Imprimer
           </button>
-          <button onClick={() => { if (navigator.share) navigator.share({ title:'Attestation POGO', text:'Réservation '+ride.reference, url:window.location.href }); else { navigator.clipboard.writeText(window.location.href); alert('Lien copié !'); } }} style={{ flex:1, height:'48px', borderRadius:'14px', background:'#fff', color:'#003A7A', fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:'14px', border:'1.5px solid #e2e8f0', cursor:'pointer' }}>
+          <button onClick={() => {
+            if (navigator.share) navigator.share({ title:'Attestation POGO', text:'Réservation '+ride.reference, url:window.location.href });
+            else { navigator.clipboard.writeText(window.location.href); alert('Lien copié !'); }
+          }} style={{ flex:1, height:'48px', borderRadius:'14px', background:'#fff', color:'#003A7A', fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:'14px', border:'1.5px solid #e2e8f0', cursor:'pointer' }}>
             🔗 Partager
           </button>
         </div>
-
-        <p style={{ textAlign:'center', fontSize:'11px', color:'#94a3b8', marginTop:'16px' }}>
-          POGO · Université Euromed de Fès · {new Date().getFullYear()}
-        </p>
+        <p style={{ textAlign:'center', fontSize:'11px', color:'#94a3b8', marginTop:'16px' }}>POGO · Université Euromed de Fès · {new Date().getFullYear()}</p>
       </div>
     </>
   );

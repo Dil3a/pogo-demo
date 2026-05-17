@@ -139,7 +139,7 @@ export default function RidePage() {
         <div style={{ background:'#fff', borderRadius:'14px', border:'1px solid #e2e8f0', padding:'16px', textAlign:'center', marginBottom:'12px' }}>
           <div style={{ fontSize:'12px', fontWeight:700, color:'#003A7A', marginBottom:'8px' }}>📄 Attestation de réservation</div>
           <img
-            src={'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=' + encodeURIComponent(window?.location?.origin + '/attestation/' + ride.id) + '&color=003A7A&margin=8'}
+            src={'https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' + encodeURIComponent((typeof window !== 'undefined' ? window.location.origin : '') + '/attestation/' + ride.id + '?d=' + btoa(JSON.stringify(ride))) + '&color=003A7A&margin=8'}
             alt='QR Attestation'
             style={{ borderRadius:'8px', marginBottom:'8px' }}
           />
