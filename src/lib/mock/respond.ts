@@ -48,7 +48,7 @@ export function fail(
 export async function withIdempotency<T extends Response>(
   key: string | null,
   compute: () => Promise<T>,
-): Promise<T | Response> {
+): Promise<T> {
   if (!key) {
     return compute();
   }

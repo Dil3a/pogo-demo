@@ -12,11 +12,6 @@ import { z } from 'zod';
  * them into client code, which is the safety we want.
  */
 
-const truthy = z
-  .string()
-  .transform((v) => v === 'true' || v === '1')
-  .pipe(z.boolean());
-
 const clientSchema = z.object({
   NEXT_PUBLIC_APP_NAME: z.string().default('POGO'),
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
