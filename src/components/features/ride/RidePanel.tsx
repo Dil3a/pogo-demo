@@ -20,9 +20,9 @@ export function RidePanel() {
     selectedScooter,
     durationHours,
     paymentMethod,
-    idempotencyKey,
     setDuration,
     setPaymentMethod,
+    setActiveRide,
     regenerateIdempotencyKey,
     reset,
   } = useRideStore();
@@ -50,17 +50,11 @@ export function RidePanel() {
   async function confirm() {
     if (!selectedScooter) return;
 
-    // Always use a fresh key so retries never get a cached response
+    // Always use a fresh idempotency key
     regenerateIdempotencyKey();
+    const freshKey = `ride-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-    // Wait a tick for the new key to propagate
-    await new Promise((r) => setTimeout(r, 10));
-
-    const freshKey = useRideStore.getState().idempotencyKey;
-
-    // Find the matching payment method
-    const method =
-      methods?.find((m) => m.type === paymentMethod) ?? methods?.[0];
+    const method = methods?.find((m) => m.type === paymentMethod) ?? methods?.[0];
 
     if (!method) {
       toast.error('Chargement des moyens de paiement, réessayez.');
@@ -72,13 +66,16 @@ export function RidePanel() {
         scooterId: selectedScooter.id,
         durationHours,
         paymentMethodId: method.id,
-        idempotencyKey: freshKey ?? crypto.randomUUID(),
+        idempotencyKey: freshKey,
       });
+
+      // Cache ride in store so the ride page doesn't need to refetch
+      setActiveRide(ride);
+
       toast.success(`Réservation confirmée — ${selectedScooter.code}`);
       reset();
       router.push(`/ride/${ride.id}`);
     } catch (e) {
-      // Regenerate key so the next attempt is fresh
       regenerateIdempotencyKey();
       toast.error(
         e instanceof Error ? e.message : 'Impossible de réserver. Réessayez.',
@@ -95,9 +92,7 @@ export function RidePanel() {
     >
       <div className="flex flex-col gap-5">
         <div>
-          <div className="mb-2 text-xs font-semibold text-slate-700">
-            Durée
-          </div>
+          <div className="mb-2 text-xs font-semibold text-slate-700">Durée</div>
           <DurationPicker
             rateCard={rateCard}
             value={durationHours}
@@ -106,9 +101,7 @@ export function RidePanel() {
         </div>
 
         <div>
-          <div className="mb-2 text-xs font-semibold text-slate-700">
-            Mode de paiement
-          </div>
+          <div className="mb-2 text-xs font-semibold text-slate-700">Mode de paiement</div>
           <PaymentMethodPicker
             value={paymentMethod}
             walletBalanceCentimes={wallet?.balanceCentimes}
@@ -118,18 +111,12 @@ export function RidePanel() {
         </div>
 
         <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <span className="text-sm font-semibold text-slate-700">
-            Total à régler
-          </span>
-          <span className="text-xl font-black text-pogo-700">
-            {formatMoney(amountCentimes)}
-          </span>
+          <span className="text-sm font-semibold text-slate-700">Total à régler</span>
+          <span className="text-xl font-black text-pogo-700">{formatMoney(amountCentimes)}</span>
         </div>
 
         <div className="flex gap-2">
-          <Button variant="secondary" fullWidth onClick={reset}>
-            Annuler
-          </Button>
+          <Button variant="secondary" fullWidth onClick={reset}>Annuler</Button>
           <Button
             variant="uemf"
             fullWidth
