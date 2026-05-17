@@ -22,7 +22,7 @@ export default function ProfilePage() {
   const logout = useLogout();
 
   async function handleLogout() {
-    await logout.mutateAsync();
+    logout.mutate();
     router.push('/login');
   }
 
@@ -86,7 +86,7 @@ export default function ProfilePage() {
         size="lg"
         fullWidth
         onClick={handleLogout}
-        loading={logout.isPending}
+        
       >
         <LogOut className="h-5 w-5" />
         Déconnexion
