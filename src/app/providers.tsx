@@ -3,22 +3,26 @@
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
+import { ApiClientError } from '@/lib/api/client';
 
 function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        // Don't retry on 4xx errors - they're not transient
+        // Fix 2: Check exact HTTP status instead of substring search
         retry: (failureCount, error: unknown) => {
-          if (error instanceof Error && error.message.includes('4')) return false;
+          if (error instanceof ApiClientError) {
+            // Never retry client errors (4xx) - they won't succeed on retry
+            if (error.status >= 400 && error.status < 500) return false;
+            // Retry server errors (5xx) up to 2 times
+            return failureCount < 2;
+          }
+          // Retry network errors up to 2 times
           return failureCount < 2;
         },
         retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
-        // Don't refetch on window focus - reduces unnecessary requests
         refetchOnWindowFocus: false,
-        // Keep data fresh for 30s by default
         staleTime: 30 * 1000,
-        // Keep unused data in cache for 5 minutes
         gcTime: 5 * 60 * 1000,
       },
       mutations: {
@@ -32,10 +36,8 @@ let browserQueryClient: QueryClient | undefined;
 
 function getQueryClient() {
   if (typeof window === 'undefined') {
-    // Server: always make a new query client
     return makeQueryClient();
   }
-  // Browser: reuse the same client
   if (!browserQueryClient) browserQueryClient = makeQueryClient();
   return browserQueryClient;
 }

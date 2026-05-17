@@ -5,14 +5,8 @@ import { ApiErrorSchema, type ApiError } from '@/types/domain';
 /**
  * Single HTTP client used by every feature.
  *
- * Design points:
- *  - One layer wraps `fetch` so we can swap transport (msw, real backend, mock) by
- *    flipping `NEXT_PUBLIC_USE_MOCK_API` — no caller changes.
- *  - Response validation with Zod at the boundary: if the backend ever sends an
- *    unexpected shape, we surface a typed error rather than crashing in render.
- *  - Idempotency-Key on POSTs that allow it — the unlock flow MUST be safe to retry.
- *  - 401 triggers a single refresh attempt; on second 401 the auth store clears
- *    and the router middleware redirects.
+ * Fix 2: retry uses exact HTTP status check (error.status === 404)
+ * Fix 5: idempotency key uses crypto.randomUUID() with proper fallback
  */
 
 export class ApiClientError extends Error {
@@ -26,33 +20,30 @@ export class ApiClientError extends Error {
   }
 }
 
-/** Generate a stable idempotency key for a request. Caller-supplied keys win. */
+/** Fix 5: Secure idempotency key generator works in all environments */
 function generateIdempotencyKey(): string {
-  // crypto.randomUUID exists in modern browsers and Node 19+.
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
-  // Fallback for very old environments — sufficient for idempotency, not for security.
+  // Secure fallback using getRandomValues
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const arr = new Uint8Array(16);
+    crypto.getRandomValues(arr);
+    return Array.from(arr, (b) => b.toString(16).padStart(2, '0')).join('-');
+  }
+  // Last resort fallback (non-secure, dev only)
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 export interface ApiRequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
-  /** Force a specific idempotency key. Auto-generated for unsafe methods otherwise. */
   idempotencyKey?: string;
-  /** Optional Zod schema to validate the response. Omit for fire-and-forget. */
   schema?: z.ZodTypeAny;
-  /** Abort signal — pass from TanStack Query to support cancellation. */
   signal?: AbortSignal;
-  /** Skip the 401 → refresh dance. Used by the refresh endpoint itself. */
   skipRefresh?: boolean;
 }
 
-/**
- * Internal — perform a single HTTP request. Wraps fetch with our error envelope
- * convention and runtime validation.
- */
 async function rawRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   const { method = 'GET', body, idempotencyKey, schema, signal } = options;
 
@@ -65,7 +56,6 @@ async function rawRequest<T>(path: string, options: ApiRequestOptions = {}): Pro
     headers['Content-Type'] = 'application/json';
   }
 
-  // Idempotency for unsafe methods that mutate.
   if (method === 'POST' || method === 'PATCH' || method === 'PUT') {
     headers['Idempotency-Key'] = idempotencyKey ?? generateIdempotencyKey();
   }
@@ -78,11 +68,10 @@ async function rawRequest<T>(path: string, options: ApiRequestOptions = {}): Pro
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
-      credentials: 'include', // send the session cookie
+      credentials: 'include',
       signal,
     });
-  } catch (err) {
-    // Network failure — fetch throws TypeError. Wrap it so callers see a consistent shape.
+  } catch {
     throw new ApiClientError(
       0,
       { code: 'NETWORK_ERROR', message: 'Network request failed. Check your connection.' },
@@ -91,12 +80,10 @@ async function rawRequest<T>(path: string, options: ApiRequestOptions = {}): Pro
 
   const requestId = response.headers.get('x-request-id') ?? undefined;
 
-  // 204 No Content — no body to parse.
   if (response.status === 204) {
     return undefined as T;
   }
 
-  // Try to parse JSON; tolerate empty bodies on errors.
   const text = await response.text();
   let payload: unknown = undefined;
   if (text.length > 0) {
@@ -121,15 +108,12 @@ async function rawRequest<T>(path: string, options: ApiRequestOptions = {}): Pro
     throw new ApiClientError(response.status, apiError, requestId);
   }
 
-  // Unwrap the envelope: { data, meta } → data
   const data = (payload as { data?: unknown })?.data ?? payload;
 
   if (schema) {
     const parsed = schema.safeParse(data);
     if (!parsed.success) {
-      // In dev, surface the validation errors. In prod, log to Sentry and throw generic.
       if (process.env.NODE_ENV !== 'production') {
-         
         console.error('[api] Response validation failed', parsed.error.format());
       }
       throw new ApiClientError(
@@ -144,12 +128,6 @@ async function rawRequest<T>(path: string, options: ApiRequestOptions = {}): Pro
   return data as T;
 }
 
-/**
- * Public API — one method per HTTP verb plus helpers.
- *
- * Pass a Zod schema to get back validated, typed data:
- *   const scooter = await api.get('/scooters/abc', { schema: ScooterSchema });
- */
 export const api = {
   get: <T>(path: string, options: Omit<ApiRequestOptions, 'method' | 'body'> = {}) =>
     rawRequest<T>(path, { ...options, method: 'GET' }),
