@@ -10,7 +10,7 @@ export function usePaymentMethods() {
   return useQuery({
     queryKey: paymentMethodsQueryKey,
     queryFn: payments.listMethods,
-    staleTime: 60 * 1000,
+    staleTime: 0,
   });
 }
 

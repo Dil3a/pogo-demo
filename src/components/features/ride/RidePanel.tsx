@@ -2,15 +2,6 @@
 
 /**
  * RidePanel — the reservation funnel as a bottom-sheet / dialog.
- *
- * Funnel structure:
- *   1. Pick a duration bucket
- *   2. Pick a payment method
- *   3. Review and confirm
- *
- * State is read from `useRideStore` (Zustand) — the same idempotency key flows
- * through `useCreateRide`, ensuring that double-tapping "Confirmer" does not
- * create two reservations or two wallet debits.
  */
 
 import { useMemo } from 'react';
@@ -40,7 +31,7 @@ export function RidePanel() {
   } = useRideStore();
 
   const { data: wallet } = useWallet();
-  const { data: methods } = usePaymentMethods();
+  const { data: methods, isLoading: methodsLoading } = usePaymentMethods();
   const createRide = useCreateRide();
 
   const rateCard = useMemo(
@@ -61,12 +52,18 @@ export function RidePanel() {
 
   async function confirm() {
     if (!selectedScooter || !idempotencyKey) return;
-    // Translate the chosen method type into the saved method's UUID.
-    const method = methods?.find((m) => m.type === paymentMethod);
+
+    // Find the payment method — use first available if not found
+    let method = methods?.find((m) => m.type === paymentMethod);
+    if (!method && methods && methods.length > 0) {
+      method = methods[0];
+    }
     if (!method) {
-      toast.error('Mode de paiement introuvable. Réessayez.');
+      // If methods still not loaded, retry after a short delay
+      toast.error('Chargement en cours, réessayez dans un instant.');
       return;
     }
+
     try {
       const ride = await createRide.mutateAsync({
         scooterId: selectedScooter.id,
@@ -131,7 +128,7 @@ export function RidePanel() {
           <Button
             variant="uemf"
             fullWidth
-            loading={createRide.isPending}
+            loading={createRide.isPending || methodsLoading}
             onClick={confirm}
           >
             Confirmer
