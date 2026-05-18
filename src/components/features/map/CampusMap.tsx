@@ -62,7 +62,7 @@ export function CampusMap({ scooters, stations }: Props) {
         });
 
         L.marker([station.lat, station.lng], { icon }).addTo(map)
-          .bindPopup(`<b style="color:#003A7A">${station.label}</b><br><small>${station.availableCount} disponibles · ${station.capacity} bornes</small>`);
+          .bindPopup(`<b style="color:#003A7A">${station.label}</b><br><small>${station.availableCount} disponibles · ${station.capacity} bornes</small>`).openPopup();
 
         L.marker([station.lat, station.lng], { icon: labelIcon, interactive: false }).addTo(map);
       });
@@ -81,7 +81,7 @@ export function CampusMap({ scooters, stations }: Props) {
         });
 
         const marker = L.marker([sc.lat, sc.lng], { icon }).addTo(map);
-        marker.bindTooltip(`${sc.code} · ${sc.batteryPct}% · ${available ? 'Disponible' : sc.status === 'charging' ? 'En charge' : 'En cours'}`, { direction: 'top', offset: [0, -24] });
+        marker.bindTooltip(`${sc.code} · ${sc.batteryPct}%`, { direction: 'top', offset: [0, -24], permanent: available, className: available ? 'leaflet-pogo-tooltip' : '' });
         if (available) marker.on('click', () => selectScooter(sc));
         markersRef.current.push(marker);
       });

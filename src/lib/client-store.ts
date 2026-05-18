@@ -1,6 +1,7 @@
 /**
- * CLIENT-SIDE MOCK STORE
- * All data lives in browser memory + localStorage for persistence across refreshes.
+ * CLIENT-SIDE STORE
+ * Persists wallet, rides and scooter state to localStorage so data
+ * survives page refreshes.
  */
 
 import type { Scooter, Station, Ride, User, PaymentMethod, WalletTransaction } from '@/types/domain';
@@ -49,81 +50,79 @@ const initialTransactions: WalletTransaction[] = [
   { id: 'tx0', amountCentimes: 50000, reason: 'Recharge carte étudiant', createdAt: '2026-05-10T09:00:00.000Z', relatedRideReference: null },
 ];
 
-const LS_KEY = 'pogo_store_v2';
-
-function saveToStorage(data: object) {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch {}
-}
+const STORAGE_KEY = 'pogo_store_v2';
 
 function loadFromStorage() {
+  if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(LS_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
   } catch { return null; }
+}
+
+function saveToStorage(data: {
+  wallet: number;
+  rides: Ride[];
+  transactions: WalletTransaction[];
+  scooters: Scooter[];
+}) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch { /* quota exceeded, skip */ }
 }
 
 class ClientStore {
   stations: Station[] = structuredClone(initialStations);
-  scooters: Scooter[] = structuredClone(initialScooters);
-  user: User = structuredClone(initialUser);
-  rides: Ride[] = [];
+  scooters: Scooter[];
+  user: User;
+  rides: Ride[];
   paymentMethods: PaymentMethod[] = structuredClone(initialPaymentMethods);
-  transactions: WalletTransaction[] = structuredClone(initialTransactions);
+  transactions: WalletTransaction[];
   listeners: Set<() => void> = new Set();
 
   constructor() {
-    this.loadState();
-    // Check for expired rides on init
-    this.checkExpiredRides();
-    // Check every minute
-    if (typeof window !== 'undefined') {
-      setInterval(() => this.checkExpiredRides(), 60000);
+    const saved = loadFromStorage();
+    if (saved) {
+      this.user = { ...structuredClone(initialUser), walletBalanceCentimes: saved.wallet ?? initialUser.walletBalanceCentimes };
+      this.rides = saved.rides ?? [];
+      this.transactions = saved.transactions ?? structuredClone(initialTransactions);
+      this.scooters = saved.scooters ?? structuredClone(initialScooters);
+      // Check for expired rides and free up scooters
+      this._processExpiredRides();
+    } else {
+      this.user = structuredClone(initialUser);
+      this.rides = [];
+      this.transactions = structuredClone(initialTransactions);
+      this.scooters = structuredClone(initialScooters);
     }
   }
 
-  loadState() {
-    const saved = loadFromStorage();
-    if (!saved) return;
-    if (saved.user) this.user = saved.user;
-    if (saved.rides) this.rides = saved.rides;
-    if (saved.transactions) this.transactions = saved.transactions;
-    if (saved.scooters) this.scooters = saved.scooters;
+  private _processExpiredRides() {
+    const now = Date.now();
+    this.rides.forEach((ride) => {
+      if (ride.status === 'active' && ride.expiresAt && new Date(ride.expiresAt).getTime() < now) {
+        ride.status = 'completed';
+        ride.endedAt = ride.expiresAt;
+        const sc = this.scooters.find((s) => s.id === ride.scooterId);
+        const station = this.stations[0]!;
+        if (sc) {
+          sc.status = 'available';
+          sc.stationId = station.id;
+          sc.stationLabel = station.label;
+        }
+      }
+    });
   }
 
-  saveState() {
+  private _save() {
     saveToStorage({
-      user: this.user,
+      wallet: this.user.walletBalanceCentimes,
       rides: this.rides,
       transactions: this.transactions,
       scooters: this.scooters,
     });
-  }
-
-  // Auto-lock expired rides and return scooters to available
-  checkExpiredRides() {
-    const now = Date.now();
-    let changed = false;
-    this.rides.forEach((ride) => {
-      if (ride.status === 'active' && ride.expiresAt) {
-        const expiry = new Date(ride.expiresAt).getTime();
-        if (now > expiry) {
-          ride.status = 'completed';
-          ride.endedAt = new Date().toISOString();
-          // Return scooter to station
-          const scooter = this.scooters.find((s) => s.id === ride.scooterId);
-          const station = this.stations[0]!;
-          if (scooter) {
-            scooter.status = 'available';
-            scooter.stationId = station.id;
-            scooter.stationLabel = station.label;
-            scooter.lat = station.lat;
-            scooter.lng = station.lng;
-          }
-          changed = true;
-        }
-      }
-    });
-    if (changed) { this.saveState(); this.notify(); }
   }
 
   subscribe(fn: () => void): () => void {
@@ -131,11 +130,12 @@ class ClientStore {
     return () => { this.listeners.delete(fn); };
   }
 
-  notify() { this.listeners.forEach((fn) => fn()); }
+  notify() {
+    this.listeners.forEach((fn) => fn());
+  }
 
   login(matricule: string): User {
     this.user = { ...this.user, matricule };
-    this.saveState();
     this.notify();
     return this.user;
   }
@@ -163,9 +163,7 @@ class ClientStore {
     const amountCentimes = rate?.priceCentimes ?? 500;
 
     if (method.type === 'student_card') {
-      if (this.user.walletBalanceCentimes < amountCentimes) {
-        throw new Error('Solde insuffisant sur la carte étudiant');
-      }
+      if (this.user.walletBalanceCentimes < amountCentimes) throw new Error('Solde insuffisant sur la carte étudiant');
       this.user.walletBalanceCentimes -= amountCentimes;
       this.transactions.unshift({
         id: `tx-${Date.now()}`,
@@ -198,7 +196,7 @@ class ClientStore {
     scooter.stationId = null;
     scooter.stationLabel = null;
     this.rides.unshift(ride);
-    this.saveState();
+    this._save();
     this.notify();
     return ride;
   }
@@ -208,7 +206,7 @@ class ClientStore {
     if (!ride) throw new Error('Course introuvable');
     ride.status = 'active';
     ride.startedAt = new Date().toISOString();
-    this.saveState();
+    this._save();
     this.notify();
     return { ...ride };
   }
@@ -228,7 +226,7 @@ class ClientStore {
       scooter.lng = station.lng;
       ride.endStationLabel = station.label;
     }
-    this.saveState();
+    this._save();
     this.notify();
     return { ...ride };
   }
@@ -241,7 +239,7 @@ class ClientStore {
   }
 
   reset() {
-    localStorage.removeItem(LS_KEY);
+    localStorage.removeItem(STORAGE_KEY);
     this.stations = structuredClone(initialStations);
     this.scooters = structuredClone(initialScooters);
     this.user = structuredClone(initialUser);
@@ -253,7 +251,6 @@ class ClientStore {
 }
 
 let instance: ClientStore | null = null;
-
 export function getClientStore(): ClientStore {
   if (!instance) instance = new ClientStore();
   return instance;

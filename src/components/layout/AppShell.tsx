@@ -6,6 +6,7 @@ import { Map, Scan, History, Wallet, User } from 'lucide-react';
 import { useMe } from '@/hooks/useAuth';
 import { cn } from '@/lib/cn';
 import { InstallPrompt } from '@/components/ui/InstallPrompt';
+import { useRideExpiry } from '@/hooks/useRideExpiry';
 
 const NAV_ITEMS = [
   { href: '/map',     label: 'Carte',    icon: Map },
@@ -19,6 +20,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: user } = useMe();
 
+  useRideExpiry();
   const initials = user
     ? `${user.firstName[0] ?? ''}${user.lastName[0] ?? ''}`.toUpperCase()
     : '··';

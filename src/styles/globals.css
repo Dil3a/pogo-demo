@@ -58,3 +58,16 @@
 [data-radix-dialog-content] {
   z-index: 100 !important;
 }
+
+/* Station labels on map */
+.station-label {
+  background: rgba(0,58,122,0.85) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 4px !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  padding: 2px 6px !important;
+  box-shadow: none !important;
+}
+.station-label::before { display: none !important; }
