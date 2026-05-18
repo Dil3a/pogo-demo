@@ -1,4 +1,5 @@
 'use client';
+import { InstallPrompt } from '@/components/ui/InstallPrompt';
 
 /**
  * AppShell — the chrome around every authenticated student page.
