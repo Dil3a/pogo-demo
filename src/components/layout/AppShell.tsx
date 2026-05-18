@@ -1,31 +1,18 @@
 'use client';
-import { InstallPrompt } from '@/components/ui/InstallPrompt';
-
-/**
- * AppShell — the chrome around every authenticated student page.
- *
- * Layout:
- *   - Top: UEMF + POGO brand bar (gradient #003A7A → #1565c0 → #1a8a3a as
- *     in the existing portal).
- *   - Middle: main content (children).
- *   - Bottom: 4-icon bottom nav for thumb-reach navigation on mobile.
- *
- * The same component is reused on desktop (where the bottom nav becomes a
- * floating left rail via Tailwind `sm:` classes).
- */
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Map, Scan, History, Wallet } from 'lucide-react';
-import { BrandPogo } from '@/components/ui/Brand';
+import { Map, Scan, History, Wallet, User } from 'lucide-react';
 import { useMe } from '@/hooks/useAuth';
 import { cn } from '@/lib/cn';
+import { InstallPrompt } from '@/components/ui/InstallPrompt';
 
 const NAV_ITEMS = [
-  { href: '/map', label: 'Carte', icon: Map },
-  { href: '/scan', label: 'Scanner', icon: Scan },
-  { href: '/history', label: 'Trajets', icon: History },
-  { href: '/wallet', label: 'Solde', icon: Wallet },
+  { href: '/map',     label: 'Carte',    icon: Map },
+  { href: '/scan',    label: 'Scanner',  icon: Scan },
+  { href: '/history', label: 'Trajets',  icon: History },
+  { href: '/wallet',  label: 'Solde',    icon: Wallet },
+  { href: '/profile', label: 'Profil',   icon: User },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -37,70 +24,89 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     : '··';
 
   return (
-    <div className="flex min-h-dvh flex-col bg-gradient-to-br from-slate-50 to-green-50/40">
-      {/* Brand bar — same gradient as UEMF portal topbar */}
-      <header
-        className="flex h-14 items-center justify-between px-4 shadow-md shadow-uemf-blue/20"
-        style={{
-          background:
-            'linear-gradient(90deg, #003A7A 0%, #1565c0 50%, #1a8a3a 100%)',
-        }}
-      >
-        <Link href="/map" className="flex items-center">
-          <BrandPogo size="sm" />
-        </Link>
-        <div className="flex items-center gap-3">
-          {user && (
-            <div className="hidden text-right text-xs text-white/85 sm:block">
-              <div className="font-semibold">
-                {user.firstName} {user.lastName}
-              </div>
-              <div className="opacity-80">{user.matricule}</div>
+    <div className="flex min-h-dvh flex-col" style={{ background: '#f0f4f8' }}>
+
+      {/* ── TOPBAR ── */}
+      <header style={{ background: '#003A7A', flexShrink: 0 }}>
+
+        {/* Main header row */}
+        <div className="flex h-14 items-center justify-between px-4">
+
+          {/* Left — UEMF × POGO */}
+          <Link href="/map" className="flex items-center gap-2.5">
+            {/* UEMF badge */}
+            <div style={{ background: '#fff', borderRadius: '8px', padding: '4px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
+              <span style={{ fontSize: '10px', fontWeight: 800, color: '#003A7A', letterSpacing: '0.5px' }}>UEMF</span>
+              <span style={{ fontSize: '7px', color: '#1a8a3a', fontWeight: 700, marginTop: '1px' }}>Université</span>
             </div>
-          )}
-          <Link
-            href="/profile"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-xs font-bold text-white"
-            aria-label="Profil"
-          >
-            {initials}
+            {/* × */}
+            <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '16px', fontWeight: 300, lineHeight: 1 }}>×</span>
+            {/* POGO */}
+            <div className="flex items-center gap-2">
+              <svg width="26" height="26" viewBox="0 0 200 200">
+                <rect width="200" height="200" rx="40" fill="rgba(255,255,255,0.15)" />
+                <circle cx="100" cy="100" r="60" fill="white" />
+                <circle cx="100" cy="100" r="34" fill="#00c9b1" />
+                <circle cx="100" cy="100" r="14" fill="white" />
+              </svg>
+              <div>
+                <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '15px', fontWeight: 800, color: '#fff', letterSpacing: '2px', lineHeight: 1 }}>POGO</div>
+                <div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.6)', marginTop: '1px', lineHeight: 1 }}>Campus UEMF · Fès</div>
+              </div>
+            </div>
           </Link>
+
+          {/* Right — user */}
+          <div className="flex items-center gap-2">
+            {user && (
+              <div className="hidden text-right sm:block">
+                <div style={{ fontSize: '11px', fontWeight: 600, color: '#fff', lineHeight: 1.2 }}>{user.firstName} {user.lastName}</div>
+                <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.6)' }}>{user.matricule}</div>
+              </div>
+            )}
+            <Link
+              href="/profile"
+              style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: '#fff' }}
+              aria-label="Profil"
+            >
+              {initials}
+            </Link>
+          </div>
+        </div>
+
+        {/* Partnership banner */}
+        <div style={{ background: '#1a8a3a', padding: '4px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00c9b1', flexShrink: 0 }} />
+          <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.9)', fontWeight: 600, letterSpacing: '0.3px' }}>
+            Plateforme officielle de mobilité douce · Partenariat UEMF
+          </span>
         </div>
       </header>
 
-      {/* Content */}
+      {/* ── CONTENT ── */}
       <main className="flex-1 overflow-y-auto pb-20">
         <div className="mx-auto w-full max-w-2xl px-4 py-5">{children}</div>
       </main>
 
-      {/* Bottom nav */}
+      {/* ── BOTTOM NAV ── */}
       <nav
         aria-label="Navigation principale"
         className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur-md"
       >
         <ul className="mx-auto flex max-w-2xl">
           {NAV_ITEMS.map((item) => {
-            const active =
-              pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
             return (
               <li key={item.href} className="flex-1">
                 <Link
                   href={item.href}
                   className={cn(
-                    'flex flex-col items-center gap-1 py-3 text-[11px] font-semibold transition-colors',
-                    active
-                      ? 'text-pogo-600'
-                      : 'text-slate-500 hover:text-uemf-blue',
+                    'flex flex-col items-center gap-1 py-3 text-[10px] font-semibold transition-colors',
+                    active ? 'text-pogo-600' : 'text-slate-400 hover:text-uemf-blue',
                   )}
                 >
-                  <Icon
-                    className={cn(
-                      'h-5 w-5',
-                      active &&
-                        'drop-shadow-[0_0_8px_rgba(0,201,177,0.4)]',
-                    )}
-                  />
+                  <Icon className={cn('h-5 w-5', active && 'drop-shadow-[0_0_8px_rgba(0,201,177,0.4)]')} />
                   <span>{item.label}</span>
                 </Link>
               </li>
@@ -108,6 +114,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </ul>
       </nav>
+
+      <InstallPrompt />
     </div>
   );
 }
