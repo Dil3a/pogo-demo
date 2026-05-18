@@ -80,6 +80,7 @@ export function CampusMap({ scooters, stations }: Props) {
           </div>`,
         });
 
+        if (sc.lat == null || sc.lng == null) return;
         const marker = L.marker([sc.lat, sc.lng], { icon }).addTo(map);
         marker.bindTooltip(`${sc.code} · ${sc.batteryPct}%`, { direction: 'top', offset: [0, -24], permanent: available, className: available ? 'leaflet-pogo-tooltip' : '' });
         if (available) marker.on('click', () => selectScooter(sc));
