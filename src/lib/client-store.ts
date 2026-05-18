@@ -1,8 +1,6 @@
 /**
  * CLIENT-SIDE MOCK STORE
- * 
- * All data lives in browser memory — no API calls, no serverless issues.
- * This is a singleton that persists for the entire browser session.
+ * All data lives in browser memory + localStorage for persistence across refreshes.
  */
 
 import type { Scooter, Station, Ride, User, PaymentMethod, WalletTransaction } from '@/types/domain';
@@ -37,16 +35,9 @@ const initialScooters: Scooter[] = [
 ];
 
 const initialUser: User = {
-  id: 'u1',
-  matricule: '1234567',
-  firstName: 'Yassine',
-  lastName: 'El Idrissi',
-  email: 'y.elidrissi@uemf.ma',
-  establishment: 'UEMF',
-  program: 'Génie Informatique',
-  role: 'student',
-  walletBalanceCentimes: 24700,
-  createdAt: '2024-09-01T08:00:00.000Z',
+  id: 'u1', matricule: '1234567', firstName: 'Yassine', lastName: 'El Idrissi',
+  email: 'y.elidrissi@uemf.ma', establishment: 'UEMF', program: 'Génie Informatique',
+  role: 'student', walletBalanceCentimes: 24700, createdAt: '2024-09-01T08:00:00.000Z',
 };
 
 const initialPaymentMethods: PaymentMethod[] = [
@@ -58,6 +49,19 @@ const initialTransactions: WalletTransaction[] = [
   { id: 'tx0', amountCentimes: 50000, reason: 'Recharge carte étudiant', createdAt: '2026-05-10T09:00:00.000Z', relatedRideReference: null },
 ];
 
+const LS_KEY = 'pogo_store_v2';
+
+function saveToStorage(data: object) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch {}
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
 class ClientStore {
   stations: Station[] = structuredClone(initialStations);
   scooters: Scooter[] = structuredClone(initialScooters);
@@ -67,23 +71,75 @@ class ClientStore {
   transactions: WalletTransaction[] = structuredClone(initialTransactions);
   listeners: Set<() => void> = new Set();
 
+  constructor() {
+    this.loadState();
+    // Check for expired rides on init
+    this.checkExpiredRides();
+    // Check every minute
+    if (typeof window !== 'undefined') {
+      setInterval(() => this.checkExpiredRides(), 60000);
+    }
+  }
+
+  loadState() {
+    const saved = loadFromStorage();
+    if (!saved) return;
+    if (saved.user) this.user = saved.user;
+    if (saved.rides) this.rides = saved.rides;
+    if (saved.transactions) this.transactions = saved.transactions;
+    if (saved.scooters) this.scooters = saved.scooters;
+  }
+
+  saveState() {
+    saveToStorage({
+      user: this.user,
+      rides: this.rides,
+      transactions: this.transactions,
+      scooters: this.scooters,
+    });
+  }
+
+  // Auto-lock expired rides and return scooters to available
+  checkExpiredRides() {
+    const now = Date.now();
+    let changed = false;
+    this.rides.forEach((ride) => {
+      if (ride.status === 'active' && ride.expiresAt) {
+        const expiry = new Date(ride.expiresAt).getTime();
+        if (now > expiry) {
+          ride.status = 'completed';
+          ride.endedAt = new Date().toISOString();
+          // Return scooter to station
+          const scooter = this.scooters.find((s) => s.id === ride.scooterId);
+          const station = this.stations[0]!;
+          if (scooter) {
+            scooter.status = 'available';
+            scooter.stationId = station.id;
+            scooter.stationLabel = station.label;
+            scooter.lat = station.lat;
+            scooter.lng = station.lng;
+          }
+          changed = true;
+        }
+      }
+    });
+    if (changed) { this.saveState(); this.notify(); }
+  }
+
   subscribe(fn: () => void): () => void {
     this.listeners.add(fn);
     return () => { this.listeners.delete(fn); };
   }
 
-  notify() {
-    this.listeners.forEach((fn) => fn());
-  }
+  notify() { this.listeners.forEach((fn) => fn()); }
 
-  // AUTH
   login(matricule: string): User {
     this.user = { ...this.user, matricule };
+    this.saveState();
     this.notify();
     return this.user;
   }
 
-  // SCOOTERS
   getScooters(status?: string): Scooter[] {
     return status ? this.scooters.filter((s) => s.status === status) : this.scooters;
   }
@@ -95,7 +151,6 @@ class ClientStore {
     }));
   }
 
-  // RIDES
   createRide(scooterId: string, durationHours: 1 | 2 | 4, paymentMethodId: string): Ride {
     const scooter = this.scooters.find((s) => s.id === scooterId);
     if (!scooter) throw new Error('Trottinette introuvable');
@@ -139,12 +194,11 @@ class ClientStore {
       expiresAt: new Date(now.getTime() + durationHours * 3600000).toISOString(),
     };
 
-    // Mark scooter as occupied
     scooter.status = 'occupied';
     scooter.stationId = null;
     scooter.stationLabel = null;
-
     this.rides.unshift(ride);
+    this.saveState();
     this.notify();
     return ride;
   }
@@ -152,9 +206,9 @@ class ClientStore {
   unlockRide(rideId: string): Ride {
     const ride = this.rides.find((r) => r.id === rideId);
     if (!ride) throw new Error('Course introuvable');
-
     ride.status = 'active';
     ride.startedAt = new Date().toISOString();
+    this.saveState();
     this.notify();
     return { ...ride };
   }
@@ -162,11 +216,8 @@ class ClientStore {
   endRide(rideId: string): Ride {
     const ride = this.rides.find((r) => r.id === rideId);
     if (!ride) throw new Error('Course introuvable');
-
     ride.status = 'completed';
     ride.endedAt = new Date().toISOString();
-
-    // Return scooter to first available station
     const scooter = this.scooters.find((s) => s.id === ride.scooterId);
     const station = this.stations[0]!;
     if (scooter) {
@@ -177,7 +228,7 @@ class ClientStore {
       scooter.lng = station.lng;
       ride.endStationLabel = station.label;
     }
-
+    this.saveState();
     this.notify();
     return { ...ride };
   }
@@ -190,6 +241,7 @@ class ClientStore {
   }
 
   reset() {
+    localStorage.removeItem(LS_KEY);
     this.stations = structuredClone(initialStations);
     this.scooters = structuredClone(initialScooters);
     this.user = structuredClone(initialUser);
@@ -200,7 +252,6 @@ class ClientStore {
   }
 }
 
-// Single instance for entire browser session
 let instance: ClientStore | null = null;
 
 export function getClientStore(): ClientStore {
