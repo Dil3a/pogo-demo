@@ -2,22 +2,32 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { getSession, setSession, clearSession } from '@/lib/session';
 import { getClientStore } from '@/lib/client-store';
-import { useAuthStore } from '@/stores/auth.store';
 import type { User } from '@/types/domain';
 
 export function useMe() {
   const store = getClientStore();
   const [data, setData] = useState<User>(() => store.user);
+
   useEffect(() => {
+    const session = getSession();
+    if (session) {
+      store.user.matricule = session.matricule;
+      store.user.firstName = session.firstName;
+      store.user.lastName = session.lastName;
+      store.user.email = session.email;
+      store.user.establishment = session.establishment;
+      setData({ ...store.user });
+    }
     const unsub = store.subscribe(() => setData({ ...store.user }));
     return () => { unsub(); };
   }, [store]);
+
   return { data, isLoading: false, error: null };
 }
 
 export function useLoginWithMatricule() {
-  const { setUser } = useAuthStore();
   const [isPending, setIsPending] = useState(false);
 
   const mutateAsync = useCallback(async (matricule: string): Promise<User> => {
@@ -28,24 +38,31 @@ export function useLoginWithMatricule() {
         throw new Error('Le matricule doit comporter exactement 7 chiffres');
       }
       const user = getClientStore().login(matricule);
-      setUser(user);
+      setSession({
+        matricule,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        establishment: user.establishment,
+        program: user.program ?? '',
+        role: user.role as 'student' | 'admin',
+      });
       return user;
     } finally {
       setIsPending(false);
     }
-  }, [setUser]);
+  }, []);
 
   return { mutateAsync, isPending };
 }
 
 export function useLogout() {
-  const { clear } = useAuthStore();
   const router = useRouter();
 
   const mutate = useCallback(() => {
-    clear();
+    clearSession();
     router.push('/login');
-  }, [clear, router]);
+  }, [router]);
 
   return { mutate };
 }

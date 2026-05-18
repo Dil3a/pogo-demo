@@ -373,7 +373,7 @@ textarea.form-input{height:80px;padding:10px 12px;resize:none;}
         <p>Réservez une trottinette électrique directement depuis l'application POGO. Rapide, écologique et pratique sur le campus.</p>
       </div>
     </div>
-    <button class="pogo-open-btn" onclick="window.open('https://uemf-pogo.netlify.app','_blank')">
+    <button class="pogo-open-btn" onclick="goToPogo()">
       <i class="ti ti-external-link" style="font-size:18px;"></i> Ouvrir l'app POGO
     </button>
   </div>
@@ -490,6 +490,59 @@ textarea.form-input{height:80px;padding:10px 12px;resize:none;}
 <div class="toast" id="toast"></div>
 
 <script>
+// ═══ SESSION ═══
+function getSession(){try{return JSON.parse(localStorage.getItem('uemf_session')||'null');}catch{return null;}}
+function clearSession(){localStorage.removeItem('uemf_session');window.location.href='/login';}
+
+// Check login on load
+var SESSION=getSession();
+if(!SESSION){window.location.href='/login';}
+
+// ═══ PROFILE STATE ═══
+var profileOpen=false;
+
+function toggleProfile(){
+  profileOpen=!profileOpen;
+  document.getElementById('profileDropdown').style.display=profileOpen?'block':'none';
+  document.getElementById('profileOverlay').style.display=profileOpen?'block':'none';
+  if(profileOpen)loadProfileData();
+}
+
+function loadProfileData(){
+  if(!SESSION)return;
+  var initials=(SESSION.firstName[0]+(SESSION.lastName.split(' ').pop()[0]||'')).toUpperCase();
+  document.getElementById('avatarBtn').textContent=initials;
+  document.getElementById('profileAv').textContent=initials;
+  document.getElementById('profileName').textContent=SESSION.firstName+' '+SESSION.lastName;
+  document.getElementById('profileMat').textContent='Matricule : '+SESSION.matricule+' · '+SESSION.establishment;
+  // Load POGO stats from client store
+  try{
+    var raw=localStorage.getItem('pogo_store');
+    if(raw){
+      var store=JSON.parse(raw);
+      if(store.walletBalanceCentimes!==undefined){
+        document.getElementById('profileWallet').textContent=Math.round(store.walletBalanceCentimes/100)+' DHS';
+      }
+      if(store.rides){
+        document.getElementById('profileRides').textContent=store.rides.filter(function(r){return r.status==='completed';}).length;
+      }
+    }
+  }catch(e){}
+}
+
+function goToPogo(){
+  toggleProfile();
+  window.location.href='/map';
+}
+
+function loadProfile(){
+  if(!SESSION)return;
+  var initials=(SESSION.firstName[0]+(SESSION.lastName.split(' ').pop()[0]||'')).toUpperCase();
+  document.getElementById('avatarBtn').textContent=initials;
+  document.getElementById('profileName').textContent=SESSION.firstName+' '+SESSION.lastName;
+  document.getElementById('profileMat').textContent='Matricule : '+SESSION.matricule+' · '+SESSION.establishment;
+}
+
 var PERSONS=[
   {name:"Abdessamad Rhalimi",role:"Directeur pédagogique — Euromed Business School",cat:"direction",av:"AR",avClass:"av-blue"},
   {name:"Ghita Lazrak",role:"Responsable pédagogique",cat:"direction",av:"GL",avClass:"av-green"},
