@@ -75,7 +75,7 @@ export default function HistoryPage() {
       {/* Ride list */}
       <div className="flex flex-col gap-3">
         {rides.map((ride) => {
-          const status = STATUS_LABELS[ride.status] ?? { label: ride.status, variant: 'default' as const };
+          const status = STATUS_LABELS[ride.status] ?? { label: ride.status, variant: 'slate' as const };
           return (
             <Card key={ride.id} className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-pogo-50 text-xs font-black text-pogo-700 flex-shrink-0">
