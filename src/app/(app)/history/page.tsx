@@ -9,11 +9,11 @@ import { formatMoney, formatTime } from '@/lib/format/money';
 import { getClientStore } from '@/lib/client-store';
 import type { Ride } from '@/types/domain';
 
-const STATUS_LABELS: Record<string, { label: string; variant: 'success' | 'info' | 'warning' | 'danger' | 'default' }> = {
-  active:    { label: 'En cours',  variant: 'success' },
-  reserved:  { label: 'Réservé',   variant: 'info' },
-  completed: { label: 'Terminé',   variant: 'default' },
-  cancelled: { label: 'Annulé',    variant: 'danger' },
+const STATUS_LABELS: Record<string, { label: string; variant: 'green' | 'blue' | 'slate' | 'red' }> = {
+  active:    { label: 'En cours',  variant: 'green' },
+  reserved:  { label: 'Réservé',   variant: 'blue' },
+  completed: { label: 'Terminé',   variant: 'slate' },
+  cancelled: { label: 'Annulé',    variant: 'red' },
 };
 
 export default function HistoryPage() {
