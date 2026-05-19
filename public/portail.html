@@ -109,6 +109,10 @@ textarea.form-input{height:80px;padding:10px 12px;resize:none;}
 .pogo-open-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:48px;background:#fff;color:var(--td);font-family:"Syne",sans-serif;font-weight:800;font-size:14px;border-radius:12px;margin-top:14px;box-shadow:0 3px 10px rgba(0,201,177,.3);}
 
 /* TROT STATION */
+.irow{display:flex;align-items:center;gap:12px;padding:14px;border-bottom:1px solid #f1f5f9;}
+.iico{width:34px;height:34px;border-radius:9px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ik{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--sl);}
+.iv{font-size:13px;font-weight:700;color:#1a2a4a;}
 .station-card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}
 .station-name{font-size:13px;font-weight:700;color:#1a2a4a;}
 .station-cap{font-size:11px;color:var(--sl);margin-top:2px;}
@@ -201,6 +205,7 @@ textarea.form-input{height:80px;padding:10px 12px;resize:none;}
   <button class="nav-btn" onclick="goPage('attestations',this)"><i class="ti ti-file-certificate"></i> Attestations</button>
   <button class="nav-btn" onclick="goPage('annuaire',this)"><i class="ti ti-users"></i> Annuaire & Bureaux</button>
   <button class="nav-btn" onclick="goPage('trottinettes',this)"><i class="ti ti-motorbike"></i> Trottinettes POGO <span class="notif" id="trotNotif">4</span></button>
+  <button class="nav-btn" onclick="goPage('profile',this)" id="nav-profile"><i class="ti ti-user-circle"></i> Mon Profil</button>
 </div>
 
 <!-- PAGES -->
@@ -381,6 +386,64 @@ textarea.form-input{height:80px;padding:10px 12px;resize:none;}
   <div id="trotList"></div>
 </div>
 
+
+<!-- PROFILE -->
+<div class="page" id="page-profile">
+  <div class="sec-title"><i class="ti ti-user-circle"></i> Mon Profil</div>
+
+  <!-- Identity card -->
+  <div class="card" style="background:linear-gradient(135deg,rgba(0,58,122,.05),rgba(26,138,58,.05));margin-bottom:14px;">
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div id="pp-avatar" style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#003A7A,#1a8a3a);display:flex;align-items:center;justify-content:center;font-family:Syne,sans-serif;font-weight:800;font-size:22px;color:#fff;flex-shrink:0;">YE</div>
+      <div>
+        <div id="pp-name" style="font-family:Syne,sans-serif;font-size:18px;font-weight:700;color:#003A7A;">Yassine El Idrissi</div>
+        <div id="pp-etab" style="font-size:12px;color:#64748b;margin-top:2px;">Euromed Business School</div>
+        <div id="pp-role" style="margin-top:6px;display:inline-flex;align-items:center;gap:4px;background:#dcfce7;color:#166534;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700;">● Étudiant UEMF</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info rows -->
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:14px;">
+    <div class="irow"><div class="iico"><i class="ti ti-hash" style="font-size:16px;color:#003A7A;"></i></div><div><div class="ik">Matricule</div><div class="iv" id="pp-mat">1234567</div></div></div>
+    <div class="irow"><div class="iico"><i class="ti ti-mail" style="font-size:16px;color:#003A7A;"></i></div><div><div class="ik">Email</div><div class="iv" id="pp-email">y.elidrissi@uemf.ma</div></div></div>
+    <div class="irow"><div class="iico"><i class="ti ti-school" style="font-size:16px;color:#003A7A;"></i></div><div><div class="ik">Établissement</div><div class="iv" id="pp-etab2">Euromed Business School</div></div></div>
+    <div class="irow" style="border:0;"><div class="iico"><i class="ti ti-briefcase" style="font-size:16px;color:#003A7A;"></i></div><div><div class="ik">Programme</div><div class="iv" id="pp-prog">Génie Informatique & IA</div></div></div>
+  </div>
+
+  <!-- POGO Stats -->
+  <div class="sec-title"><i class="ti ti-motorbike"></i> Statistiques POGO</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+    <div class="stat-card" style="border-top:3px solid var(--teal);">
+      <div class="stat-val" style="color:var(--td);" id="pp-wallet">247 DHS</div>
+      <div class="stat-lbl">Solde carte étudiant</div>
+    </div>
+    <div class="stat-card" style="border-top:3px solid var(--green);">
+      <div class="stat-val" style="color:var(--green);" id="pp-rides">0</div>
+      <div class="stat-lbl">Trajets effectués</div>
+    </div>
+  </div>
+
+  <!-- Quick access POGO -->
+  <div style="background:linear-gradient(135deg,var(--tl),#fff);border:1.5px solid #a7f3d0;border-radius:14px;padding:16px;margin-bottom:14px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <svg width="32" height="32" viewBox="0 0 200 200"><rect width="200" height="200" rx="40" fill="#00c9b1"/><circle cx="100" cy="100" r="60" fill="white"/><circle cx="100" cy="100" r="34" fill="#00c9b1"/><circle cx="100" cy="100" r="14" fill="white"/></svg>
+      <div>
+        <div style="font-family:Syne,sans-serif;font-size:14px;font-weight:800;color:var(--td);">Application POGO</div>
+        <div style="font-size:11px;color:var(--sl);">Trottinettes électriques UEMF</div>
+      </div>
+    </div>
+    <button onclick="goToPogo()" type="button" style="width:100%;height:44px;background:linear-gradient(135deg,var(--teal),var(--td));color:#fff;border:none;border-radius:10px;font-family:Syne,sans-serif;font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+      <i class="ti ti-external-link" style="font-size:16px;"></i> Ouvrir l'app POGO
+    </button>
+  </div>
+
+  <!-- Logout -->
+  <button onclick="clearSession()" type="button" style="width:100%;height:48px;border:1.5px solid #e2e8f0;border-radius:14px;color:#475569;font-family:Syne,sans-serif;font-weight:600;font-size:14px;cursor:pointer;background:#fff;display:flex;align-items:center;justify-content:center;gap:8px;">
+    <i class="ti ti-logout" style="font-size:18px;"></i> Déconnexion
+  </button>
+</div>
+
 </div><!-- wrap -->
 </div><!-- app -->
 
@@ -511,28 +574,50 @@ function toggleProfile(){
 function loadProfileData(){
   if(!SESSION)return;
   var initials=(SESSION.firstName[0]+(SESSION.lastName.split(' ').pop()[0]||'')).toUpperCase();
+  // Topbar avatar
   document.getElementById('avatarBtn').textContent=initials;
+  // Dropdown
   document.getElementById('profileAv').textContent=initials;
   document.getElementById('profileName').textContent=SESSION.firstName+' '+SESSION.lastName;
   document.getElementById('profileMat').textContent='Matricule : '+SESSION.matricule+' · '+SESSION.establishment;
-  // Load POGO stats from client store
+  // Profile page
+  var ppAv=document.getElementById('pp-avatar');
+  if(ppAv)ppAv.textContent=initials;
+  var ppName=document.getElementById('pp-name');
+  if(ppName)ppName.textContent=SESSION.firstName+' '+SESSION.lastName;
+  var ppMat=document.getElementById('pp-mat');
+  if(ppMat)ppMat.textContent=SESSION.matricule;
+  var ppEmail=document.getElementById('pp-email');
+  if(ppEmail)ppEmail.textContent=SESSION.firstName[0].toLowerCase()+'.'+SESSION.lastName.toLowerCase().replace(/\s/g,'')+'@uemf.ma';
+  var ppEtab=document.getElementById('pp-etab');
+  if(ppEtab)ppEtab.textContent=SESSION.establishment;
+  var ppEtab2=document.getElementById('pp-etab2');
+  if(ppEtab2)ppEtab2.textContent=SESSION.establishment;
+  var ppProg=document.getElementById('pp-prog');
+  if(ppProg)ppProg.textContent=SESSION.program||'Génie Informatique & IA';
+  // POGO stats from localStorage
   try{
     var raw=localStorage.getItem('pogo_store');
     if(raw){
       var store=JSON.parse(raw);
-      if(store.walletBalanceCentimes!==undefined){
-        document.getElementById('profileWallet').textContent=Math.round(store.walletBalanceCentimes/100)+' DHS';
-      }
-      if(store.rides){
-        document.getElementById('profileRides').textContent=store.rides.filter(function(r){return r.status==='completed';}).length;
-      }
+      var walletDhs=store.walletBalanceCentimes!==undefined?Math.round(store.walletBalanceCentimes/100)+' DHS':'247 DHS';
+      var rides=store.rides?store.rides.filter(function(r){return r.status==='completed';}).length:0;
+      document.getElementById('profileWallet').textContent=walletDhs;
+      document.getElementById('profileRides').textContent=rides;
+      var ppWallet=document.getElementById('pp-wallet');
+      if(ppWallet)ppWallet.textContent=walletDhs;
+      var ppRides=document.getElementById('pp-rides');
+      if(ppRides)ppRides.textContent=rides;
     }
   }catch(e){}
 }
 
 function goToPogo(){
-  toggleProfile();
-  window.location.href='/map';
+  // Close profile if open
+  if(profileOpen){ profileOpen=false; document.getElementById('profileDropdown').style.display='none'; document.getElementById('profileOverlay').style.display='none'; }
+  // Navigate to POGO - works on Netlify deployment
+  var pogoUrl = window.location.origin + '/map';
+  window.location.href = pogoUrl;
 }
 
 function loadProfile(){
