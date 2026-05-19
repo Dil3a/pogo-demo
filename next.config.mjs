@@ -13,11 +13,7 @@ const nextConfig = {
       { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
   },
-  async redirects() {
-    return [
-      { source: '/portail.html', destination: '/portail', permanent: true },
-    ];
-  },
+
   async headers() {
     return [
       {
